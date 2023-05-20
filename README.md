@@ -35,6 +35,15 @@ To hear the sound, you will need to connect an I²S audio device to
 these pins.  Check out for some I²S audio amplifier breakout or board
 or any device that features an I²S input.
 
+If you are planning to build an I²S amplifier by your own, you may
+want to have a look at Sect. 3.4.2 “PCM/I2S audio” of the book
+“Hardware design with RP2040” published by Raspberry Pi Ltd, available
+at <a
+href="https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf">here</a>,
+that presents a schematic diagram for a complete digitial I²S PCM
+audio circuit (though note that in the schematics, the assumed order
+of the GPIO pin numbers differs from our wiring).
+
 ## Compiling
 
 It is highly recommended to compile the project on a Raspberry Pi
@@ -42,8 +51,8 @@ computer.  Compiling _should_ also work on any other Linux machine or
 maybe even under Windows, but I have not verified that.
 
 The build files assume that the files of this repository are located
-side by side with the Pico SDK as provided by the Raspberry
-foundation.  See <a
+side by side with the Pico SDK as provided by Raspberry Pi Ltd.  See
+<a
 href="https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html">The
 C/C++ SDK</a> for instruction how to install the SDK.  The probably
 easiest way to install the SDK on a Raspberry Pi is to use the setup
