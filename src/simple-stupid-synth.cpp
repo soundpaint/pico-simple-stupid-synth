@@ -31,6 +31,8 @@
  */
 
 #include "simple-stupid-synth.hpp"
+#include "i2s-audio-target.hpp"
+#include "pwm-audio-target.hpp"
 #include <math.h>
 #include "pico/stdlib.h"
 
@@ -43,28 +45,21 @@ Simple_stupid_synth::DEFAULT_SAMPLE_FREQ = 48000; // [HZ]
 const uint8_t
 Simple_stupid_synth::VOL_BITS = 8;
 
-MIDI_state_machine
-Simple_stupid_synth::midi_state_machine;
-
-I2S_audio_target
-Simple_stupid_synth::audio_target;
-
-void
-Simple_stupid_synth::init(const uint32_t sample_freq,
-                          const uint8_t gpio_pin_i2s_clock_base,
-                          const uint8_t gpio_pin_i2s_data,
-                          const uint8_t gpio_pin_activity_indicator)
+Simple_stupid_synth::
+Simple_stupid_synth(Audio_target *const audio_target,
+                    MIDI_state_machine *const midi_state_machine,
+                    const uint8_t gpio_pin_activity_indicator) :
+  _audio_target(audio_target), _midi_state_machine(midi_state_machine)
 {
-  stdio_init_all();
-  audio_target.init(sample_freq, gpio_pin_i2s_clock_base, gpio_pin_i2s_data);
-  midi_state_machine.init(sample_freq, gpio_pin_activity_indicator);
+  const uint32_t sample_freq = _audio_target->get_sample_freq();
+  _midi_state_machine->init(sample_freq, gpio_pin_activity_indicator);
   sleep_ms(10);
 }
 
 void
 Simple_stupid_synth::synth_task()
 {
-  struct audio_buffer *audio_buffer = audio_target.take_audio_buffer(false);
+  struct audio_buffer *audio_buffer = _audio_target->take_audio_buffer(false);
   if (!audio_buffer) {
     return;
   }
@@ -75,7 +70,7 @@ Simple_stupid_synth::synth_task()
   const size_t num_pitches = MIDI_state_machine::NUM_PITCHES;
   const uint32_t count_inc = MIDI_state_machine::COUNT_INC;
   MIDI_state_machine::pitch_status_t *pitch_statuses =
-    midi_state_machine.get_pitch_statuses();
+    _midi_state_machine->get_pitch_statuses();
   for (uint32_t i = 0; i < audio_buffer_sample_count * 2;) {
     int64_t sample = 0;
     for (size_t pitch = 0; pitch < num_pitches; pitch++) {
@@ -98,31 +93,43 @@ Simple_stupid_synth::synth_task()
     out[i++] = scaled_sample; // left channel
     out[i++] = scaled_sample; // right channel
   }
-  audio_target.give_audio_buffer(audio_buffer);
+  _audio_target->give_audio_buffer(audio_buffer);
 }
 
 void
 Simple_stupid_synth::main_loop()
 {
   for (;;) {
-    midi_state_machine.tx_task();
-    midi_state_machine.rx_task();
+    _midi_state_machine->tx_task();
+    _midi_state_machine->rx_task();
     synth_task();
   }
 }
 
 int main()
 {
-  const uint8_t gpio_pin_activity_indicator =
-    Simple_stupid_synth::GPIO_PIN_LED; // GPIO 25 (LED)
+  stdio_init_all();
+#ifdef USE_PWM_AUDIO
+  const uint8_t gpio_pin_pwm_left = PICO_AUDIO_PWM_L_PIN; // GPIO 0 (PWM_L)
+  const uint8_t gpio_pin_pwm_right = PICO_AUDIO_PWM_R_PIN; // GPIO 1 (PWM_R)
+  PWM_audio_target audio_target;
+  audio_target.init(Simple_stupid_synth::DEFAULT_SAMPLE_FREQ,
+                    gpio_pin_pwm_left, gpio_pin_pwm_right);
+#else
   const uint8_t gpio_pin_i2s_clock_base =
     PICO_AUDIO_I2S_CLOCK_PIN_BASE; // GPIO 26 (BLCK) + GPIO 27 (LRCLK)
   const uint8_t gpio_pin_i2s_data =
     PICO_AUDIO_I2S_DATA_PIN; // GPIO 28 (DATA)
-  Simple_stupid_synth::init(Simple_stupid_synth::DEFAULT_SAMPLE_FREQ,
-                            gpio_pin_i2s_clock_base,
-                            gpio_pin_i2s_data,
-                            gpio_pin_activity_indicator);
-  Simple_stupid_synth::main_loop();
+  I2S_audio_target audio_target;
+  audio_target.init(Simple_stupid_synth::DEFAULT_SAMPLE_FREQ,
+                    gpio_pin_i2s_clock_base, gpio_pin_i2s_data);
+#endif
+  MIDI_state_machine midi_state_machine;
+  const uint8_t gpio_pin_activity_indicator =
+    Simple_stupid_synth::GPIO_PIN_LED; // GPIO 25 (LED)
+  Simple_stupid_synth simple_stupid_synth(&audio_target,
+                                          &midi_state_machine,
+                                          gpio_pin_activity_indicator);
+  simple_stupid_synth.main_loop();
   return 0;
 }

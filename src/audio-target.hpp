@@ -1,5 +1,5 @@
 /*
- * MIDI State Machine of Simple Stupid Synthesizer
+ * Audio Target of Simple Stupid Synthesizer
  *
  * Copyright (C) 2023 Jürgen Reuter
  *
@@ -30,42 +30,33 @@
  * Author's web site: www.juergen-reuter.de
  */
 
-#ifndef MIDI_STATE_MACHINE_HPP
-#define MIDI_STATE_MACHINE_HPP
+#ifndef AUDIO_TARGET_HPP
+#define AUDIO_TARGET_HPP
 
-#include <ctime>
+#include <inttypes.h>
+#include "pico/audio.h"
 
-class MIDI_state_machine {
+class Audio_target {
 public:
-  typedef struct {
-    uint32_t count_wrap;
-    uint32_t count;
-    uint8_t velocity;
-    int16_t amplitude;
-  } pitch_status_t;
-  static const size_t NUM_PITCHES = 0x80;
-  static const uint32_t COUNT_INC;
-  MIDI_state_machine();
-  virtual ~MIDI_state_machine();
-  void init(const uint32_t sample_freq,
-            const uint8_t gpio_pin_activity_indicator);
-  pitch_status_t *get_pitch_statuses();
-  void rx_task();
-  void tx_task();
-private:
-  static const uint8_t COUNT_HEADROOM_BITS;
-  uint8_t _gpio_pin_activity_indicator;
-  pitch_status_t _pitch_statuses[NUM_PITCHES];
-  uint8_t _skip_count = 0;
-  uint8_t _msg_count = 0;
-  uint64_t _timestamp_active_sensing;
-  void consume_event_packet(const uint8_t *event_packet);
-  void produce_tx_data(uint8_t *buffer,
-                       __unused const size_t max_buffer_size,
-                       size_t *const buffer_size);
+  Audio_target();
+  virtual ~Audio_target();
+  virtual uint32_t get_sample_freq() const = 0;
+  struct audio_buffer *take_audio_buffer(const bool block);
+  void give_audio_buffer(audio_buffer_t *audio_buffer);
+protected:
+  struct audio_format _target_audio_format = {
+    .sample_freq = 0,
+    .format = AUDIO_BUFFER_FORMAT_PCM_S16,
+    .channel_count = 2,
+  };
+  struct audio_buffer_format _target_audio_buffer_format = {
+    .format = &_target_audio_format,
+    .sample_stride = 4
+  };
+  struct audio_buffer_pool *_target_producer_pool;
 };
 
-#endif /* MIDI_STATE_MACHINE_HPP */
+#endif /* AUDIO_TARGET_HPP */
 
 /*
  * Local variables:

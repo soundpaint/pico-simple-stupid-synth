@@ -19,7 +19,9 @@ pico_sdk_init()
 add_executable(simple-stupid-synth
   src/simple-stupid-synth.cpp
   src/midi-state-machine.cpp
+  src/audio-target.cpp
   src/i2s-audio-target.cpp
+  src/pwm-audio-target.cpp
   src/usb_descriptors.c)
 
 target_compile_definitions(simple-stupid-synth PRIVATE
@@ -31,9 +33,6 @@ target_include_directories(simple-stupid-synth PRIVATE
   ../pico-sdk/lib/tinyusb/src
   ../pico-sdk/lib/tinyusb/hw)
 
-# enable serial output via USB
-#pico_enable_stdio_usb(simple-stupid-synth 1)
-
 # enable serial output via UART
 #pico_enable_stdio_uart(usb_sound_card 1)
 
@@ -43,7 +42,8 @@ target_link_libraries(simple-stupid-synth
   pico_multicore
   tinyusb_device
   tinyusb_board
-  pico_audio_i2s)
+  pico_audio_i2s
+  pico_audio_pwm)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(simple-stupid-synth)

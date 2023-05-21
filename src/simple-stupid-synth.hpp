@@ -35,22 +35,21 @@
 
 #include <inttypes.h>
 #include "midi-state-machine.hpp"
-#include "i2s-audio-target.hpp"
+#include "audio-target.hpp"
 
 class Simple_stupid_synth {
 public:
   static const uint32_t DEFAULT_SAMPLE_FREQ; // [HZ]
   static const uint32_t GPIO_PIN_LED;
-  static void init(const uint32_t sample_freq,
-                   const uint8_t gpio_pin_i2s_clock_base,
-                   const uint8_t gpio_pin_i2s_data,
-                   const uint8_t gpio_pin_activity_indicator);
-  static void main_loop();
+  Simple_stupid_synth(Audio_target *const audio_target,
+                      MIDI_state_machine *const midi_state_machine,
+                      const uint8_t gpio_pin_activity_indicator);
+  void main_loop();
 private:
   static const uint8_t VOL_BITS;
-  static MIDI_state_machine midi_state_machine;
-  static I2S_audio_target audio_target;
-  static void synth_task();
+  Audio_target *const _audio_target;
+  MIDI_state_machine *const _midi_state_machine;
+  void synth_task();
 };
 
 #endif /* SIMPLE_STUPID_SYNTH_HPP */

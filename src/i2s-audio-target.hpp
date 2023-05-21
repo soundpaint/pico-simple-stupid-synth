@@ -33,35 +33,23 @@
 #ifndef I2S_AUDIO_TARGET_HPP
 #define I2S_AUDIO_TARGET_HPP
 
-#include <inttypes.h>
+#include "audio-target.hpp"
 #include "pico/audio_i2s.h"
 
-class I2S_audio_target {
+class I2S_audio_target : public Audio_target {
 public:
-  I2S_audio_target();
   virtual ~I2S_audio_target();
   void init(const uint32_t sample_freq,
             const uint8_t gpio_pin_i2s_clock_base,
             const uint8_t gpio_pin_i2s_data);
-  struct audio_buffer *take_audio_buffer(const bool block);
-  void give_audio_buffer(audio_buffer_t *audio_buffer);
+  virtual uint32_t get_sample_freq() const;
 private:
-  struct audio_format _target_audio_format = {
-    .sample_freq = 0,
-    .format = AUDIO_BUFFER_FORMAT_PCM_S16,
-    .channel_count = 2,
-  };
-  struct audio_buffer_format _target_audio_buffer_format = {
-    .format = &_target_audio_format,
-    .sample_stride = 4
-  };
   struct audio_i2s_config _target_audio_config = {
     .data_pin = 255,
     .clock_pin_base = 255,
     .dma_channel = 0,
     .pio_sm = 0,
   };
-  struct audio_buffer_pool *_target_producer_pool;
 };
 
 #endif /* I2S_AUDIO_TARGET_HPP */

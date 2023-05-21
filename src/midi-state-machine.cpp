@@ -65,6 +65,7 @@ MIDI_state_machine::init(const uint32_t sample_freq,
     _pitch_statuses[pitch].count_wrap = count_wrap;
     _pitch_statuses[pitch].count = 0;
     _pitch_statuses[pitch].velocity = 0;
+    _pitch_statuses[pitch].amplitude = 0;
   }
   _timestamp_active_sensing = time_us_64();
   board_init();

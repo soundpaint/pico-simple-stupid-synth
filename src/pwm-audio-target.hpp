@@ -1,5 +1,5 @@
 /*
- * MIDI State Machine of Simple Stupid Synthesizer
+ * PWM Audio Target of Simple Stupid Synthesizer
  *
  * Copyright (C) 2023 Jürgen Reuter
  *
@@ -30,42 +30,40 @@
  * Author's web site: www.juergen-reuter.de
  */
 
-#ifndef MIDI_STATE_MACHINE_HPP
-#define MIDI_STATE_MACHINE_HPP
+#ifndef PWM_AUDIO_TARGET_HPP
+#define PWM_AUDIO_TARGET_HPP
 
-#include <ctime>
+#include "audio-target.hpp"
+#include "pico/audio_pwm.h"
 
-class MIDI_state_machine {
+class PWM_audio_target : public Audio_target {
 public:
-  typedef struct {
-    uint32_t count_wrap;
-    uint32_t count;
-    uint8_t velocity;
-    int16_t amplitude;
-  } pitch_status_t;
-  static const size_t NUM_PITCHES = 0x80;
-  static const uint32_t COUNT_INC;
-  MIDI_state_machine();
-  virtual ~MIDI_state_machine();
+  virtual ~PWM_audio_target();
   void init(const uint32_t sample_freq,
-            const uint8_t gpio_pin_activity_indicator);
-  pitch_status_t *get_pitch_statuses();
-  void rx_task();
-  void tx_task();
+            const uint8_t gpio_pin_pwm_left,
+            const uint8_t gpio_pin_pwm_right,
+            const enum audio_correction_mode mode = fixed_dither);
+  virtual uint32_t get_sample_freq() const;
 private:
-  static const uint8_t COUNT_HEADROOM_BITS;
-  uint8_t _gpio_pin_activity_indicator;
-  pitch_status_t _pitch_statuses[NUM_PITCHES];
-  uint8_t _skip_count = 0;
-  uint8_t _msg_count = 0;
-  uint64_t _timestamp_active_sensing;
-  void consume_event_packet(const uint8_t *event_packet);
-  void produce_tx_data(uint8_t *buffer,
-                       __unused const size_t max_buffer_size,
-                       size_t *const buffer_size);
+  struct audio_pwm_channel_config _target_audio_config_l = {
+    .core = {
+      .base_pin = 255,
+      .dma_channel = 0,
+      .pio_sm = 0,
+    },
+    .pattern = 255,
+  };
+  struct audio_pwm_channel_config _target_audio_config_r = {
+    .core = {
+      .base_pin = 255,
+      .dma_channel = 1,
+      .pio_sm = 1,
+    },
+    .pattern = 255,
+  };
 };
 
-#endif /* MIDI_STATE_MACHINE_HPP */
+#endif /* PWM_AUDIO_TARGET_HPP */
 
 /*
  * Local variables:

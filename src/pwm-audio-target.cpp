@@ -1,5 +1,5 @@
 /*
- * I2S Audio Target of Simple Stupid Synthesizer
+ * PWM Audio Target of Simple Stupid Synthesizer
  *
  * Copyright (C) 2023 Jürgen Reuter
  *
@@ -30,50 +30,50 @@
  * Author's web site: www.juergen-reuter.de
  */
 
-#include "i2s-audio-target.hpp"
+#include "pwm-audio-target.hpp"
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
-I2S_audio_target::~I2S_audio_target()
+PWM_audio_target::~PWM_audio_target()
 {
 }
 
 void
-I2S_audio_target::init(const uint32_t sample_freq,
-                       const uint8_t gpio_pin_i2s_clock_base,
-                       const uint8_t gpio_pin_i2s_data)
+PWM_audio_target::init(const uint32_t sample_freq,
+                       const uint8_t gpio_pin_pwm_left,
+                       const uint8_t gpio_pin_pwm_right,
+                       const enum audio_correction_mode mode)
 {
   _target_audio_format.sample_freq = sample_freq;
-  _target_audio_config.clock_pin_base = gpio_pin_i2s_clock_base;
-  _target_audio_config.data_pin = gpio_pin_i2s_data;
+  _target_audio_config_l.core.base_pin = gpio_pin_pwm_left;
+  _target_audio_config_r.core.base_pin = gpio_pin_pwm_right;
   _target_producer_pool =
     audio_new_producer_pool(&_target_audio_buffer_format,
                             8, 48);
-  const struct audio_format *output_audio_format =
-    audio_i2s_setup(&_target_audio_format, &_target_audio_config);
-  if (!output_audio_format) {
+  const struct audio_format *output_audio_format_l =
+    audio_pwm_setup(&_target_audio_format, -1, &_target_audio_config_l);
+  if (!output_audio_format_l) {
+    panic("unable to open audio device for selected audio format\n");
+  }
+  const struct audio_format *output_audio_format_r =
+    audio_pwm_setup(&_target_audio_format, -1, &_target_audio_config_r);
+  if (!output_audio_format_r) {
     panic("unable to open audio device for selected audio format\n");
   }
 
   const __unused bool ok =
-    audio_i2s_connect_extra(_target_producer_pool, false, 2, 96, NULL);
+    audio_pwm_default_connect(_target_producer_pool, false);
   if (!ok) {
-    panic("failed connecting I2S to producer pool");
+    panic("failed connecting PWM to producer pool");
   }
 
-  audio_i2s_set_enabled(true);
-
-  // I2S enhance signal quality
-  gpio_set_drive_strength(gpio_pin_i2s_clock_base, GPIO_DRIVE_STRENGTH_2MA);
-  gpio_set_drive_strength(gpio_pin_i2s_clock_base + 1, GPIO_DRIVE_STRENGTH_2MA);
-  gpio_set_drive_strength(gpio_pin_i2s_data, GPIO_DRIVE_STRENGTH_2MA);
-  gpio_disable_pulls(gpio_pin_i2s_clock_base);
-  gpio_disable_pulls(gpio_pin_i2s_clock_base);
-  gpio_disable_pulls(gpio_pin_i2s_data);
+  audio_pwm_set_enabled(true);
+  // set_sys_clock_48mhz();
+  audio_pwm_set_correction_mode(mode);
 }
 
 uint32_t
-I2S_audio_target::get_sample_freq() const
+PWM_audio_target::get_sample_freq() const
 {
   return _target_audio_format.sample_freq;
 }
