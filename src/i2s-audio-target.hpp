@@ -38,11 +38,10 @@
 
 class I2S_audio_target : public Audio_target {
 public:
+  I2S_audio_target(const uint32_t sample_freq);
   virtual ~I2S_audio_target();
-  void init(const uint32_t sample_freq,
-            const uint8_t gpio_pin_i2s_clock_base,
+  void init(const uint8_t gpio_pin_i2s_clock_base,
             const uint8_t gpio_pin_i2s_data);
-  virtual uint32_t get_sample_freq() const;
 private:
   struct audio_i2s_config _target_audio_config = {
     .data_pin = 255,

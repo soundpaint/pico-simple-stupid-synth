@@ -34,16 +34,19 @@
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
+I2S_audio_target::I2S_audio_target(const uint32_t sample_freq)
+  : Audio_target(sample_freq)
+{
+}
+
 I2S_audio_target::~I2S_audio_target()
 {
 }
 
 void
-I2S_audio_target::init(const uint32_t sample_freq,
-                       const uint8_t gpio_pin_i2s_clock_base,
+I2S_audio_target::init(const uint8_t gpio_pin_i2s_clock_base,
                        const uint8_t gpio_pin_i2s_data)
 {
-  _target_audio_format.sample_freq = sample_freq;
   _target_audio_config.clock_pin_base = gpio_pin_i2s_clock_base;
   _target_audio_config.data_pin = gpio_pin_i2s_data;
   _target_producer_pool =
@@ -70,12 +73,6 @@ I2S_audio_target::init(const uint32_t sample_freq,
   gpio_disable_pulls(gpio_pin_i2s_clock_base);
   gpio_disable_pulls(gpio_pin_i2s_clock_base);
   gpio_disable_pulls(gpio_pin_i2s_data);
-}
-
-uint32_t
-I2S_audio_target::get_sample_freq() const
-{
-  return _target_audio_format.sample_freq;
 }
 
 /*

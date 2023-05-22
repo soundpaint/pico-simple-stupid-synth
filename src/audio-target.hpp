@@ -38,9 +38,9 @@
 
 class Audio_target {
 public:
-  Audio_target();
+  Audio_target(const uint32_t sample_freq);
   virtual ~Audio_target();
-  virtual uint32_t get_sample_freq() const = 0;
+  uint32_t get_sample_freq() const;
   struct audio_buffer *take_audio_buffer(const bool block);
   void give_audio_buffer(audio_buffer_t *audio_buffer);
 protected:

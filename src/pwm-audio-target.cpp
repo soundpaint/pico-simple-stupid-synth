@@ -34,17 +34,20 @@
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
+PWM_audio_target::PWM_audio_target(const uint32_t sample_freq)
+  : Audio_target(sample_freq)
+{
+}
+
 PWM_audio_target::~PWM_audio_target()
 {
 }
 
 void
-PWM_audio_target::init(const uint32_t sample_freq,
-                       const uint8_t gpio_pin_pwm_left,
+PWM_audio_target::init(const uint8_t gpio_pin_pwm_left,
                        const uint8_t gpio_pin_pwm_right,
                        const enum audio_correction_mode mode)
 {
-  _target_audio_format.sample_freq = sample_freq;
   _target_audio_config_l.core.base_pin = gpio_pin_pwm_left;
   _target_audio_config_r.core.base_pin = gpio_pin_pwm_right;
   _target_producer_pool =
@@ -70,12 +73,6 @@ PWM_audio_target::init(const uint32_t sample_freq,
   audio_pwm_set_enabled(true);
   // set_sys_clock_48mhz();
   audio_pwm_set_correction_mode(mode);
-}
-
-uint32_t
-PWM_audio_target::get_sample_freq() const
-{
-  return _target_audio_format.sample_freq;
 }
 
 /*

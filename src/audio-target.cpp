@@ -34,8 +34,9 @@
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
-Audio_target::Audio_target()
+Audio_target::Audio_target(const uint32_t sample_freq)
 {
+  _target_audio_format.sample_freq = sample_freq;
   _target_producer_pool = 0;
 }
 
@@ -45,6 +46,12 @@ Audio_target::~Audio_target()
     // TODO: Deallocate.
     _target_producer_pool = 0;
   }
+}
+
+uint32_t
+Audio_target::get_sample_freq() const
+{
+  return _target_audio_format.sample_freq;
 }
 
 struct audio_buffer *

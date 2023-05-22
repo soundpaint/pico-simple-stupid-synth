@@ -38,12 +38,11 @@
 
 class PWM_audio_target : public Audio_target {
 public:
+  PWM_audio_target(const uint32_t sample_freq);
   virtual ~PWM_audio_target();
-  void init(const uint32_t sample_freq,
-            const uint8_t gpio_pin_pwm_left,
+  void init(const uint8_t gpio_pin_pwm_left,
             const uint8_t gpio_pin_pwm_right,
             const enum audio_correction_mode mode = fixed_dither);
-  virtual uint32_t get_sample_freq() const;
 private:
   struct audio_pwm_channel_config _target_audio_config_l = {
     .core = {
