@@ -104,6 +104,40 @@ Synth_ (if not, try disconnecting and reconnecting your USB cable).
 You can play any MIDI files, using your favorite MIDI player, just by
 selecting this MIDI device as MIDI ouput device in your MIDI player.
 
+## Known Issues
+
+The code is _prepared_ to also use PWM audio instead of I²S audio,
+such that an amplifier or high-impedance headphones can be connected
+just via a resistance to the PWM outputs.  However, due to various
+bugs / limitations, PWM audio does not yet work:
+
+* PWM _stereo_ audio does not seem to work at all.  Even the
+  <code>sound_wave.c</code> example in the
+  <code>pico-playground</code>, when modified to produce stereo output
+  with identical left and right channel samples, will get stuck
+  shortly after calling <code>audio_pwm_set_enabled</code> and clog
+  the complete system.
+
+* PWM mono audio _basically_ works (as the <code>sound_wave.c</code>
+  example demonstrates), but stops producing any output on the
+  associated GPIO pin, as soon as the TinyUSB library is set up for
+  creating a MIDI USB port.
+
+* While I²S audio presumably works for a wide range of sample
+  frequencies, according to my observation PWM mono audio behaves as
+  if it was stuck at a fixed sample rate of around 57000 Hz.  In
+  contrast to I²S audio, the frequency parameter that is set in the
+  <code>audio_format</code> structure does not seem to have any
+  influence on the sample rate of PWM audio.
+
+* Also note that the implementation of PWM audio in
+  <code>audio_pwm.c</code> launches MCU core 1 to initiate DMA
+  transfers.  That is, if any other part of the software also tries to
+  deploy core 1, a clash will occur, if no further provisions are
+  taken.  Maybe a clash like this is somehow related to the reason why
+  PWM mono does not work any more as soon as setting up a MIDI port
+  with the TinyUSB library?
+
 ## License &amp; Third-Party Code
 
 The source code of the Pico Simple Stupid Synth is available under the
