@@ -34,7 +34,7 @@ target_include_directories(simple-stupid-synth PRIVATE
   ../pico-sdk/lib/tinyusb/hw)
 
 # enable serial output via UART
-#pico_enable_stdio_uart(usb_sound_card 1)
+#pico_enable_stdio_uart(simple-stupid-synth 1)
 
 # pull in common dependencies
 target_link_libraries(simple-stupid-synth

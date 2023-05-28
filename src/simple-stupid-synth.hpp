@@ -47,6 +47,7 @@ public:
   void main_loop();
 private:
   static const uint8_t VOL_BITS;
+  const bool _is_stereo;
   Audio_target *const _audio_target;
   MIDI_state_machine *const _midi_state_machine;
   void synth_task();

@@ -32,11 +32,21 @@
 
 #include "pwm-audio-target.hpp"
 #include "pico/stdlib.h"
-#include "pico/audio.h"
 
-PWM_audio_target::PWM_audio_target(const uint32_t sample_freq)
-  : Audio_target(sample_freq)
+PWM_audio_target::PWM_audio_target(const uint32_t sample_freq,
+                                   const uint8_t gpio_pin_pwm_mono)
+  : Audio_target(sample_freq, false)
 {
+  _target_audio_config_mono.core.base_pin = gpio_pin_pwm_mono;
+}
+
+PWM_audio_target::PWM_audio_target(const uint32_t sample_freq,
+                                   const uint8_t gpio_pin_pwm_left,
+                                   const uint8_t gpio_pin_pwm_right)
+  : Audio_target(sample_freq, true)
+{
+  _target_audio_config_l.core.base_pin = gpio_pin_pwm_left;
+  _target_audio_config_r.core.base_pin = gpio_pin_pwm_right;
 }
 
 PWM_audio_target::~PWM_audio_target()
@@ -44,34 +54,30 @@ PWM_audio_target::~PWM_audio_target()
 }
 
 void
-PWM_audio_target::init(const uint8_t gpio_pin_pwm_left,
-                       const uint8_t gpio_pin_pwm_right,
+PWM_audio_target::init(const uint16_t buffer_count,
+                       const uint16_t buffer_sample_count,
                        const enum audio_correction_mode mode)
 {
-  _target_audio_config_l.core.base_pin = gpio_pin_pwm_left;
-  _target_audio_config_r.core.base_pin = gpio_pin_pwm_right;
+  const int32_t max_latency_ms = -1; // don't care
   _target_producer_pool =
     audio_new_producer_pool(&_target_audio_buffer_format,
-                            8, 48);
-  const struct audio_format *output_audio_format_l =
-    audio_pwm_setup(&_target_audio_format, -1, &_target_audio_config_l);
-  if (!output_audio_format_l) {
+                            buffer_count, buffer_sample_count);
+  const struct audio_format *output_audio_format =
+    is_stereo() ?
+    audio_pwm_setup(&_target_audio_format, max_latency_ms,
+                    &_target_audio_config_l,
+                    &_target_audio_config_r) :
+    audio_pwm_setup(&_target_audio_format, max_latency_ms,
+                    &_target_audio_config_mono);
+  if (!output_audio_format) {
     panic("unable to open audio device for selected audio format\n");
   }
-  const struct audio_format *output_audio_format_r =
-    audio_pwm_setup(&_target_audio_format, -1, &_target_audio_config_r);
-  if (!output_audio_format_r) {
-    panic("unable to open audio device for selected audio format\n");
-  }
-
   const __unused bool ok =
     audio_pwm_default_connect(_target_producer_pool, false);
   if (!ok) {
     panic("failed connecting PWM to producer pool");
   }
-
   audio_pwm_set_enabled(true);
-  // set_sys_clock_48mhz();
   audio_pwm_set_correction_mode(mode);
 }
 

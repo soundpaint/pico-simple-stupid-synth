@@ -38,20 +38,23 @@
 
 class Audio_target {
 public:
-  Audio_target(const uint32_t sample_freq);
+  Audio_target(const uint32_t sample_freq, const bool stereo);
   virtual ~Audio_target();
   uint32_t get_sample_freq() const;
+  bool is_stereo() const;
   struct audio_buffer *take_audio_buffer(const bool block);
   void give_audio_buffer(audio_buffer_t *audio_buffer);
 protected:
+  static const uint16_t DEFAULT_BUFFER_COUNT;
+  static const uint16_t DEFAULT_BUFFER_SAMPLE_COUNT;
   struct audio_format _target_audio_format = {
     .sample_freq = 0,
     .format = AUDIO_BUFFER_FORMAT_PCM_S16,
-    .channel_count = 2,
+    .channel_count = 0,
   };
   struct audio_buffer_format _target_audio_buffer_format = {
     .format = &_target_audio_format,
-    .sample_stride = 4
+    .sample_stride = 0,
   };
   struct audio_buffer_pool *_target_producer_pool;
 };

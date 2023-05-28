@@ -34,9 +34,22 @@
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
-Audio_target::Audio_target(const uint32_t sample_freq)
+const uint16_t
+Audio_target::DEFAULT_BUFFER_COUNT = 8;
+
+const uint16_t
+Audio_target::DEFAULT_BUFFER_SAMPLE_COUNT = 256;
+
+Audio_target::Audio_target(const uint32_t sample_freq, const bool stereo)
 {
   _target_audio_format.sample_freq = sample_freq;
+  if (stereo) {
+    _target_audio_format.channel_count = 2;
+    _target_audio_buffer_format.sample_stride = 4;
+  } else {
+    _target_audio_format.channel_count = 1;
+    _target_audio_buffer_format.sample_stride = 2;
+  }
   _target_producer_pool = 0;
 }
 
@@ -52,6 +65,12 @@ uint32_t
 Audio_target::get_sample_freq() const
 {
   return _target_audio_format.sample_freq;
+}
+
+bool
+Audio_target::is_stereo() const
+{
+  return _target_audio_format.channel_count == 2;
 }
 
 struct audio_buffer *

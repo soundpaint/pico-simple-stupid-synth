@@ -34,9 +34,13 @@
 #include "pico/stdlib.h"
 #include "pico/audio.h"
 
-I2S_audio_target::I2S_audio_target(const uint32_t sample_freq)
-  : Audio_target(sample_freq)
+I2S_audio_target::I2S_audio_target(const uint32_t sample_freq,
+                                   const uint8_t gpio_pin_i2s_clock_base,
+                                   const uint8_t gpio_pin_i2s_data)
+  : Audio_target(sample_freq, true)
 {
+  _target_audio_config.clock_pin_base = gpio_pin_i2s_clock_base;
+  _target_audio_config.data_pin = gpio_pin_i2s_data;
 }
 
 I2S_audio_target::~I2S_audio_target()
@@ -44,22 +48,22 @@ I2S_audio_target::~I2S_audio_target()
 }
 
 void
-I2S_audio_target::init(const uint8_t gpio_pin_i2s_clock_base,
-                       const uint8_t gpio_pin_i2s_data)
+I2S_audio_target::init(const uint16_t buffer_count,
+                       const uint16_t buffer_sample_count)
 {
-  _target_audio_config.clock_pin_base = gpio_pin_i2s_clock_base;
-  _target_audio_config.data_pin = gpio_pin_i2s_data;
   _target_producer_pool =
     audio_new_producer_pool(&_target_audio_buffer_format,
-                            8, 48);
+                            buffer_count, buffer_sample_count);
   const struct audio_format *output_audio_format =
     audio_i2s_setup(&_target_audio_format, &_target_audio_config);
   if (!output_audio_format) {
     panic("unable to open audio device for selected audio format\n");
   }
 
+  const uint8_t channel_count = 2; // I2S is always stereo
   const __unused bool ok =
-    audio_i2s_connect_extra(_target_producer_pool, false, 2, 96, NULL);
+    audio_i2s_connect_extra(_target_producer_pool, false, channel_count,
+                            buffer_sample_count * channel_count, NULL);
   if (!ok) {
     panic("failed connecting I2S to producer pool");
   }
@@ -67,6 +71,8 @@ I2S_audio_target::init(const uint8_t gpio_pin_i2s_clock_base,
   audio_i2s_set_enabled(true);
 
   // I2S enhance signal quality
+  const uint8_t gpio_pin_i2s_clock_base = _target_audio_config.clock_pin_base;
+  const uint8_t gpio_pin_i2s_data = _target_audio_config.data_pin;
   gpio_set_drive_strength(gpio_pin_i2s_clock_base, GPIO_DRIVE_STRENGTH_2MA);
   gpio_set_drive_strength(gpio_pin_i2s_clock_base + 1, GPIO_DRIVE_STRENGTH_2MA);
   gpio_set_drive_strength(gpio_pin_i2s_data, GPIO_DRIVE_STRENGTH_2MA);

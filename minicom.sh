@@ -29,4 +29,4 @@
 #minicom -b 115200 -D /dev/ttyACM0
 
 # minicom via serial port
-minicom -b 115200 -D /dev/ttyS0
+minicom -b 115200 -o -D /dev/ttyS0

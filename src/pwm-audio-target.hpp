@@ -38,28 +38,22 @@
 
 class PWM_audio_target : public Audio_target {
 public:
-  PWM_audio_target(const uint32_t sample_freq);
+  PWM_audio_target(const uint32_t sample_freq,
+                   const uint8_t gpio_pin_pwm_mono);
+  PWM_audio_target(const uint32_t sample_freq,
+                   const uint8_t gpio_pin_pwm_left,
+                   const uint8_t gpio_pin_pwm_right);
   virtual ~PWM_audio_target();
-  void init(const uint8_t gpio_pin_pwm_left,
-            const uint8_t gpio_pin_pwm_right,
+  void init(const uint16_t buffer_count = DEFAULT_BUFFER_COUNT,
+            const uint16_t buffer_sample_count = DEFAULT_BUFFER_SAMPLE_COUNT,
             const enum audio_correction_mode mode = fixed_dither);
 private:
-  struct audio_pwm_channel_config _target_audio_config_l = {
-    .core = {
-      .base_pin = 255,
-      .dma_channel = 0,
-      .pio_sm = 0,
-    },
-    .pattern = 255,
-  };
-  struct audio_pwm_channel_config _target_audio_config_r = {
-    .core = {
-      .base_pin = 255,
-      .dma_channel = 1,
-      .pio_sm = 1,
-    },
-    .pattern = 255,
-  };
+  struct audio_pwm_channel_config
+  _target_audio_config_l = default_left_channel_config;
+  struct audio_pwm_channel_config
+  _target_audio_config_r = default_right_channel_config;
+  struct audio_pwm_channel_config
+  _target_audio_config_mono = default_mono_channel_config;
 };
 
 #endif /* PWM_AUDIO_TARGET_HPP */
