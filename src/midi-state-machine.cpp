@@ -35,6 +35,18 @@
 #include "pico/stdlib.h"
 #include "bsp/board.h"
 
+const double
+MIDI_state_machine::OCTAVE_FREQ_RATIO = 2.0;
+
+const uint8_t
+MIDI_state_machine::NOTES_PER_OCTAVE = 12;
+
+const double
+MIDI_state_machine::A4_FREQ = 440.0;
+
+const uint8_t
+MIDI_state_machine::A4_NOTE_NUMBER = 69;
+
 const uint8_t
 MIDI_state_machine::COUNT_HEADROOM_BITS = 0x8;
 
@@ -57,9 +69,11 @@ MIDI_state_machine::init(const uint32_t sample_freq,
   gpio_init(gpio_pin_activity_indicator);
   gpio_set_dir(gpio_pin_activity_indicator, GPIO_OUT);
   const double count_inc = COUNT_INC;
+  const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
   for (size_t pitch = 0; pitch < NUM_PITCHES; pitch++) {
     const double pitch_freq =
-      440.0 * exp((pitch - 69.0) / 12.0 * log(2.0)); // [Hz]
+      A4_FREQ * exp((pitch - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
+    // half (0.5) inc, since square wave elongation toggles twice per period
     const uint32_t count_wrap =
       round(0.5 * count_inc * sample_freq / pitch_freq);
     _pitch_statuses[pitch].count_wrap = count_wrap;

@@ -33,7 +33,18 @@ size and a sample frequency of 48kHz.  Specifically,
 
 To hear the sound, you will need to connect an I²S audio device to
 these pins.  Check out for some I²S audio amplifier breakout or board
-or any device that features an I²S input.
+or any device that features an I²S input.  As an example, Fig. 1 shows
+an I²S audio device connected to the Pico.
+
+<figure style="display: block; margin: 0 auto">
+  <a href="docs/images/assembly-on-breadboard.jpg">
+    <img src="docs/images/assembly-on-breadboard.jpg"
+         alt="Assembly on Breadboard" />
+  </a>
+  <figcaption>
+    <em>Fig. 1: Assembly on Breadboard with I²S Audio Converter</em>
+  </figcaption>
+</figure>
 
 If you are planning to build an I²S amplifier by your own, you may
 want to have a look at Sect. 3.4.2 “PCM/I2S audio” of the book
@@ -77,7 +88,8 @@ Ensure you have version 1.5 of the Pico SDK or higher.  Earlier
 releases of the Pico SDK include a version of the TinyUSB library that
 is likely not to work.
 
-For compiling, run the script <code>build.sh</code> from within the
+For compiling, run the script <a
+href="build.sh"><code>build.sh</code></a> from within the
 <code>pico-simple-stupid-synth</code> directory.
 
 ## Deploying
@@ -96,6 +108,14 @@ To deploy, just copy the compiled file
 <code>~/pico/pico-simple-stupid-synth/build/simple-stupid-synth.elf</code>
 onto the Pico file system.  The file system should then automatically
 disappear again, and the synthesizer immediately starts.
+
+There is the script <a href="deploy.sh"><code>deploy.sh</code></a>
+that tries to detect device path and mount path of the connected Pico.
+Just execute this script after connecting your Pico for deploying the
+compiled file.  The script <em>should</em> work for any Debian-like
+distribution, but it has not been tested widely, so chances are high
+that it will not work in a less typical configuration environment.  In
+this case, try to deploy manually as described above.
 
 ## Running
 

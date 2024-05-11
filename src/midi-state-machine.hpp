@@ -53,6 +53,10 @@ public:
   void rx_task();
   void tx_task();
 private:
+  static const double OCTAVE_FREQ_RATIO;
+  static const uint8_t NOTES_PER_OCTAVE;
+  static const double A4_FREQ; // freqency of concert pitch [Hz]
+  static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
   static const uint8_t COUNT_HEADROOM_BITS;
   uint8_t _gpio_pin_activity_indicator;
   pitch_status_t _pitch_statuses[NUM_PITCHES];
