@@ -15,9 +15,11 @@
 \usepackage{pifont}
 \usepackage{epigraph}
 \usepackage{graphbox}
+\usepackage{array}
 
-\definecolor{MyGreen}{HTML}{80be08}
-\definecolor{MyDarkGreen}{HTML}{004900}
+\definecolor{FrameColor}{HTML}{0880be}
+\definecolor{HighlightColor}{HTML}{0879ad}
+\definecolor{WarnColor}{HTML}{f07070}
 
 %%%% BEGIN Custom Styling %%%%
 
@@ -48,28 +50,30 @@
 
 \setbeamertemplate{footline}{%
   \begin{center}
-    \color{MyGreen}
+    \color{FrameColor}
     \rule{0.93\textwidth}{0.05cm}
   \end{center}
   \vspace{-0.2cm}
   \hspace{0.5cm}%
   %\includegraphics[align=l, height=0.4cm]{../../images/project-logo.png}%
+  \color{FrameColor}%
+  \textbf{\fontsize{7}{7}\selectfont\raisebox{0.15cm}{GPN22 | 30.05.2024}}%
   \hfill%
   \usebeamercolor[fg]{page number in head/foot}%
   \usebeamerfont{page number in head/foot}%
   \selectfont\raisebox{0.15cm}{\insertframenumber\,/\,\inserttotalframenumber\kern1em}%
   \hfill%
-  \color{MyGreen}%
+  \color{FrameColor}%
   \textbf{\fontsize{8}{8}\selectfont\raisebox{0.15cm}{soundpaint.org}}%
   \hspace{0.45cm}{\ }
 }
 
-\newcommand{\clr}{MyDarkGreen}%
+\newcommand{\clr}{HighlightColor}%
 
 \setmainfont[
-    Path           = /usr/share/fonts/truetype/freefont/,
-    Extension      = .ttf,
-    Ligatures      = TeX
+  Path = /usr/share/fonts/truetype/freefont/,
+  Extension = .ttf,
+  Ligatures = TeX
 ]{FreeSans}
 
 %%%% END Custom Styling %%%%
@@ -78,6 +82,13 @@
 \newcommand{\qmark}{\ding{51} / \ding{55}}%
 \newcommand{\xmark}{\ding{55}}%
 \newcommand{\imply}{$\Rightarrow$}
+
+% Add command "\danger" for a warning symbol.  Depending on your LaTeX
+% distribution, you may need to run "sudo apt-get install
+% texlive-fonts-extra" to make the following lines work.
+\newcommand*{\TakeFourierOrnament}[1]{{%
+\fontencoding{U}\fontfamily{futs}\selectfont\char#1}}
+\newcommand*{\danger}{\TakeFourierOrnament{66}}
 
 \title[Pico Simple Stupid Synth]{Pico Simple Stupid Synth}
 \subtitle{Projektkurzvorstellung mit anschließender Diskussion}
@@ -125,23 +136,31 @@
 \begin{frame}[t]{Rechteckschwingungen}
   \begin{itemize}
   \item<2-> \color<2>{\clr} nur zwei Sample-Werte (abh.\ von Lautstärke)
-  \item<3-> \color<3>{\clr} {\imply} bei Flanke das Delta zu Ausgangsumme addieren
+  \item<3-> \color<3>{\clr} {\imply} bei Flanke das Delta zu
+    Ausgangsumme addieren
   \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]{Audio-Ausgabe}
   \begin{itemize}
-  \item<2-> \color<2>{\clr} I²S funktioniert
+  \item<2-> \color<2>{\clr} inspiriert durch Beispiel-Code in
+    \texttt{pico/pico-playground/audio/sine\_wave/sine\_wave.c}
+  \item<3-> \color<3>{\clr} I²S funktioniert gut
     \begin{itemize}
-    \item<3-> \color<3>{\clr} Implementierung über Funktion in Pico SDK
-    \item<4-> \color<4>{\clr} Ausgabe: GPIO 26 (BLCK), GPIO 27 (LRCLK), GPIO 28 (DATA)
-    \item<5-> \color<5>{\clr} Analog-Wandlung über separaten Konverter
+    \item<4-> \color<4>{\clr} Implementierung über Funktion in Pico
+      SDK
+    \item<5-> \color<5>{\clr} Ausgabe: GPIO 26 (BLCK), GPIO 27
+      (LRCLK), GPIO 28 (DATA)
+    \item<6-> \color<6>{\clr} Analog-Wandlung über separaten Konverter
     \end{itemize}
-  \item<6-> \color<6>{\clr} PWM funktioniert nicht
+  \item<7-> \color<7>{\clr} PWM funktioniert nicht wirklich
     \begin{itemize}
-    \item<7-> \color<7>{\clr} im Code vorbereitet
-    \item<8-> \color<8>{\clr} Stereo scheitert mutmaßlich an Bug in Pico SDK
-    \item<9-> \color<9>{\clr} Außerdem Kollision in der Nutzung des 2.\ CPU Core
+    \item<8-> \color<8>{\clr} zwar im Code vorbereitet
+    \item<9-> \color<9>{\clr} Stereo scheitert aber mutmaßlich an Bug
+      in Pico SDK
+    \item<10-> \color<10>{\clr} Mono nur in schlechter Qualität
+    \item<11-> \color<11>{\clr} außerdem Kollision in der Nutzung des
+      2.\ CPU Core
     \end{itemize}
   \end{itemize}
   \begin{center}
@@ -155,15 +174,19 @@
   \item<2-> \color<2>{\clr} gibt sich als MIDI Device aus
   \item<3-> \color<3>{\clr} bewältigt auch vielstimmige MIDI-Ströme
   \item<4-> \color<4>{\clr} Audio-Ausgang per I²S funktioniert
-  \item<5-> \color<5>{\clr} analoger Audio-Ausgang funktioniert {\em noch nicht}
-  \item<6-> \color<6>{\clr} sehr genaue und stabile Frequenzen dank Bresenham
-  \item<7-> \color<7>{\clr} Proof-of-Concept als Basis für komplexere Designs
+  \item<5-> \color<5>{\clr} analoger Audio-Ausgang funktioniert {\em
+    noch} nicht wirklich
+  \item<6-> \color<6>{\clr} sehr genaue und stabile Frequenzen dank
+    Bresenham
+  \item<7-> \color<7>{\clr} Proof-of-Concept als Basis für komplexere
+    Designs
   \item<8-> \color<8>{\clr} Quellcode (GPL-2.0):
     \url{https://github.com/soundpaint/pico-simple-stupid-synth}
   \end{itemize}
   Ausblick
   \begin{itemize}
-  \item<9-> \color<9>{\clr} voraussichtlich in Kürze multitimbrale Version
+  \item<9-> \color<9>{\clr} voraussichtlich in Kürze multitimbrale
+    Version
   \item<10-> \color<10>{\clr} später vielleicht deutlich komplexere
     Version auf Basis von Pico-Cluster
   \end{itemize}
@@ -184,8 +207,26 @@
 \section{Klang-Demonstration}
 
 \begin{frame}[t]{Klang-Demonstration}
-  {\em Trigger-Warning: Chiptune-artiger Sound mit hohen
-    Frequenzanteilen (Rechteckschwingungen)}
+  \begin{center}
+    \begin{tabular}{|l m{9cm}|}
+      \hline
+
+      MIDI-Datei & \texttt{MFO-Score-3.mid}\\\hline
+
+      Sammlung & \texttt{magicflute-00-overture-mids.zip}\\\hline
+
+      Quelle &
+      \url{https://www.mutopiaproject.org/ftp/MozartWA/KV620/magicflute-00-overture/magicflute-00-overture-mids.zip}\\\hline
+
+      Copyright & Public Domain\\\hline
+    \end{tabular}
+  \end{center}
+  \vspace{2cm}
+  \begin{center}
+    \color{WarnColor}{\LARGE\danger}{ }{\em
+      Trigger-Warnung:\\Chiptune-artiger Sound mit erhöhtem Anteil
+      hoher Frequenzen (Rechteckschwingungen)}
+  \end{center}
 \end{frame}
 
 \begin{frame}[t]
