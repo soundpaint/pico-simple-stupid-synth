@@ -50,6 +50,8 @@ private:
   const bool _is_stereo;
   Audio_target *const _audio_target;
   MIDI_state_machine *const _midi_state_machine;
+  static inline uint8_t do_limit(const int16_t elongation,
+                                 const uint16_t limit);
   void synth_task();
 };
 

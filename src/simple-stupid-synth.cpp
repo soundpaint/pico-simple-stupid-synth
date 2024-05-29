@@ -59,6 +59,15 @@ Simple_stupid_synth(Audio_target *const audio_target,
   sleep_ms(10);
 }
 
+inline uint8_t
+Simple_stupid_synth::do_limit(const int16_t elongation, const uint16_t limit)
+{
+  return
+    elongation >= 0 ?
+    (elongation <= limit ? elongation : limit) :
+    (-elongation <= limit ? -elongation : -limit);
+}
+
 void
 Simple_stupid_synth::synth_task()
 {
@@ -73,17 +82,20 @@ Simple_stupid_synth::synth_task()
   audio_buffer->sample_count = audio_buffer_sample_count;
   int16_t *out = (int16_t *) audio_buffer->buffer->bytes;
   const uint16_t vol_mul = round(2.0 * (((long)1u) << VOL_BITS));
-  const size_t num_osc = MIDI_state_machine::NUM_OSC;
+  const size_t num_osc = MIDI_state_machine::NUM_KEYS;
   const uint32_t count_inc = MIDI_state_machine::COUNT_INC;
   MIDI_state_machine::osc_status_t *osc_statuses =
     _midi_state_machine->get_osc_statuses();
   const uint32_t total_sample_count =
     audio_buffer->max_sample_count * (_is_stereo ? 2 : 1);
+  const int16_t cumulated_channel_pressure =
+    _midi_state_machine->get_cumulated_channel_pressure();
   for (uint32_t sample_index = 0; sample_index < total_sample_count;) {
     int64_t sample_value = 0;
-    for (size_t osc = 0; osc < num_osc; osc++) {
+    for (uint8_t osc = 0; osc < num_osc; osc++) {
       MIDI_state_machine::osc_status_t *osc_status = &osc_statuses[osc];
       uint32_t elongation = osc_status->elongation;
+      //do_limit(osc_status->elongation, cumulated_channel_pressure);
       if (elongation) {
         const uint32_t count_wrap = osc_status->count_wrap;
         uint32_t count = osc_status->count;

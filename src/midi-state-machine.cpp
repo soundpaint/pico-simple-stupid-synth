@@ -66,7 +66,7 @@ MIDI_state_machine::osc_init(const uint32_t sample_freq)
 {
   const double count_inc = COUNT_INC;
   const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
-  for (size_t osc = 0; osc < NUM_OSC; osc++) {
+  for (size_t osc = 0; osc < NUM_KEYS; osc++) {
     const double osc_freq =
       A4_FREQ * exp((osc - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
     // half (0.5) inc, since square wave elongation toggles twice per period
@@ -81,13 +81,13 @@ MIDI_state_machine::osc_init(const uint32_t sample_freq)
 }
 
 void
-MIDI_state_machine::state_init()
+MIDI_state_machine::keys_init()
 {
-  for (size_t channel = 0; channel < NUM_CHN; channel++) {
+  for (uint8_t channel = 0; channel < NUM_CHN; channel++) {
     channel_status_t *channel_status = &_midi_status.channel_status[channel];
-    for (size_t note = 0; note < NUM_OSC; note++) {
-      note_status_t *note_status = &channel_status->note_status[note];
-      note_status->velocity = 0;
+    for (uint8_t key = 0; key < NUM_KEYS; key++) {
+      key_status_t *key_status = &channel_status->key_status[key];
+      key_status->velocity = 0;
     }
   }
 }
@@ -106,7 +106,7 @@ MIDI_state_machine::init(const uint32_t sample_freq,
 {
   _timestamp_active_sensing = time_us_64();
   osc_init(sample_freq);
-  state_init();
+  keys_init();
   led_init(gpio_pin_activity_indicator);
   board_init();
   tusb_init();
@@ -119,10 +119,10 @@ MIDI_state_machine::get_osc_statuses()
 }
 
 void
-MIDI_state_machine::add_to_osc_status(const uint8_t pitch,
+MIDI_state_machine::add_to_osc_status(const uint8_t osc,
                                       const int8_t delta_velocity)
 {
-  osc_status_t *osc_status = &_osc_statuses[pitch];
+  osc_status_t *osc_status = &_osc_statuses[osc];
   osc_status->velocity += delta_velocity;
   const int16_t elongation = osc_status->elongation;
   if (elongation > 0) {
@@ -134,6 +134,78 @@ MIDI_state_machine::add_to_osc_status(const uint8_t pitch,
   }
 }
 
+uint16_t
+MIDI_state_machine::get_cumulated_channel_pressure()
+{
+  return _cumulated_channel_pressure;
+}
+
+void
+MIDI_state_machine::handle_all_sound_off()
+{
+  keys_init();
+  for (uint8_t osc = 0; osc < NUM_KEYS; osc++) {
+    osc_status_t *osc_status = &_osc_statuses[osc];
+    osc_status->velocity = 0;
+    osc_status->elongation = 0;
+  }
+  gpio_put(_gpio_pin_activity_indicator, 0);
+}
+
+void
+MIDI_state_machine::handle_all_notes_off()
+{
+  /*
+   * Since by now, we do not implement pedal control, all notes off is
+   * currently identical with all sound off.
+   */
+  handle_all_sound_off();
+}
+
+void
+MIDI_state_machine::handle_control_change(const uint8_t controller,
+                                          const uint8_t)
+{
+  if (controller < 0xf8) {
+    // ordinary control change: not implemented => ignore
+    return;
+  }
+  // controllers 120-127: channel mode message
+  switch (controller) {
+  case 0xf8:
+    handle_all_sound_off();
+    break;
+  case 0xfb:
+    handle_all_notes_off();
+    break;
+  case 0xfc:
+  case 0xfd:
+  case 0xfe:
+  case 0xff:
+    /*
+     * Not implemented.  But anyway, also turn off all notes, as the
+     * specification requires.
+     */
+    handle_all_notes_off();
+    break;
+  default:
+    // not implemented => ignore
+    break;
+  }
+}
+
+void
+MIDI_state_machine::set_note_velocity(const uint8_t channel, const uint8_t key,
+                                      const uint8_t velocity)
+{
+  channel_status_t *channel_status = &_midi_status.channel_status[channel];
+  key_status_t *key_status = &channel_status->key_status[key];
+  const uint8_t prev_velocity = key_status->velocity;
+  key_status->velocity = velocity;
+  add_to_osc_status(key, velocity - prev_velocity);
+  gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
+}
+
 /*
  * For the structure of event packets, see Sect. 4, "USB-MIDI Event
  * Packets" in the "Universal Serial Bus Device Class Definition for
@@ -143,27 +215,46 @@ void
 MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
 {
   const uint8_t code_index_number = event_packet[0] & 0xf;
-  if (code_index_number == 0x9) {
-    // note on
-    const uint8_t channel = event_packet[1] & 0xf;
-    const uint8_t pitch = event_packet[2] & 0x7f;
-    const uint8_t velocity = event_packet[3] & 0x7f;
-    channel_status_t *channel_status = &_midi_status.channel_status[channel];
-    note_status_t *note_status = &channel_status->note_status[pitch];
-    const uint8_t prev_velocity = note_status->velocity;
-    note_status->velocity = velocity;
-    add_to_osc_status(pitch, velocity - prev_velocity);
-    gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
-  } else if (code_index_number == 0x8) {
-    // note off
-    const uint8_t channel = event_packet[1] & 0xf;
-    const uint8_t pitch = event_packet[2] & 0x7f;
-    channel_status_t *channel_status = &_midi_status.channel_status[channel];
-    note_status_t *note_status = &channel_status->note_status[pitch];
-    const uint8_t velocity = note_status->velocity;
-    note_status->velocity = 0;
-    add_to_osc_status(pitch, -velocity);
-    gpio_put(_gpio_pin_activity_indicator, 0);
+  switch (code_index_number) {
+  case 0x8:
+    {
+      // note off
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t key = event_packet[2] & 0x7f;
+      set_note_velocity(channel, key, 0);
+      break;
+    }
+  case 0x9:
+    {
+      // note on
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t key = event_packet[2] & 0x7f;
+      const uint8_t velocity = event_packet[3] & 0x7f;
+      set_note_velocity(channel, key, velocity);
+      break;
+    }
+  case 0xa:
+    {
+      // polyphonic key pressure
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t key = event_packet[2] & 0x7f;
+      const uint8_t velocity = event_packet[3] & 0x7f;
+      set_note_velocity(channel, key, velocity);
+      break;
+    }
+  case 0xb:
+    {
+      // control change, including channel mode message
+      const uint8_t controller = event_packet[2] & 0x7f;
+      const uint8_t value = event_packet[3] & 0x7f;
+      handle_control_change(controller, value);
+      break;
+    }
+  default:
+    {
+      // not implemented => ignore
+      break;
+    }
   }
 }
 
