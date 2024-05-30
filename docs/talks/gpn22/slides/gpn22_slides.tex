@@ -18,7 +18,7 @@
 \usepackage{array}
 
 \definecolor{FrameColor}{HTML}{0880be}
-\definecolor{HighlightColor}{HTML}{0879ad}
+\definecolor{HighlightColor}{HTML}{08496d}
 \definecolor{WarnColor}{HTML}{f07070}
 
 %%%% BEGIN Custom Styling %%%%
@@ -133,12 +133,102 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}[t]{Rechteckschwingungen}
+\begin{frame}[fragile,t]{USB-Schnittstelle}
   \begin{itemize}
-  \item<2-> \color<2>{\clr} nur zwei Sample-Werte (abh.\ von Lautstärke)
-  \item<3-> \color<3>{\clr} {\imply} bei Flanke das Delta zu
-    Ausgangsumme addieren
+  \item<2-> \color<2>{\clr} USB-Implementierung über
+    \texttt{tinyusb}-Bibliothek (im Pico SDK enthalten)
+  \item<3-> \color<3>{\clr} Gerätedefinition in Datei
+    \texttt{usb\_descriptors.c}
+  \item<4-> \color<4>{\clr} Spannung über USB-Kabel beim Verbinden mit
+    USB Host
+  \item<5-> \color<5>{\clr} {\imply} Pico bootet, meldet sich beim
+    Host als {\em Pico Simple Stupid Synth}
+  \item<6-> \color<6>{\clr} {\imply} unmittelbar danach sichtbar im
+    Betriebssystem
+  \item<7-> \color<7>{\clr} Dispatch eingehender MIDI-Events in MIDI
+    State Machine über \texttt{rx\_task()}
+  \item<8-> \color<8>{\clr} Implementierung {\em Active Sensing} in
+    \texttt{tx\_task()}
   \end{itemize}
+  \begin{block}{Linux Shell}<6->
+    \color<6>{\clr}\small
+\begin{verbatim}
+$ aplaymidi -l
+Port    Client name                      Port name
+14:0    Midi Through                     Midi Through Port-0
+20:0    Pico Simple Stupid Synth         Pico Simple Stupid Synth MIDI 1
+\end{verbatim}
+  \end{block}
+\end{frame}
+
+\begin{frame}[t,fragile]{Hauptschleife}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} periodisch drei Aktivitäten
+    \begin{itemize}
+    \item<3-> \color<3>{\clr} ausgehende USB-Daten senden, soweit vorhanden
+    \item<4-> \color<4>{\clr} eingehende USB-Daten verarbeiten, soweit vorhanden
+    \item<5-> \color<5>{\clr} {\imply} MIDI State Machine aktualisiert
+    \item<6-> \color<6>{\clr} nächsten Audiodatenpuffer befüllen, sofern Zeit gekommen
+    \end{itemize}
+  \end{itemize}
+  \begin{block}{Hauptschleife (auf 1. CPU Core)}<2->
+    \color<2>{\clr}\normalsize
+\begin{verbatim}
+void
+Simple_stupid_synth::main_loop()
+{
+  for (;;) {
+    _midi_state_machine->tx_task();
+    _midi_state_machine->rx_task();
+    synth_task();
+  }
+}
+\end{verbatim}
+  \end{block}
+\end{frame}
+
+\begin{frame}[t]{MIDI State Machine}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} bislang nur {\em Note On} und {\em Note
+    Off} unterstützt
+  \item<3-> \color<3>{\clr} aktuell alles auf einen einzigen Kanal
+    gemerged
+  \item<4-> \color<4>{\clr} {\imply} ggf. Noten zu kurz, wenn {\em
+    Note Off} aus einst anderem Kanal zuschlägt (FIXME)
+  \item<5-> \color<5>{\clr} Ergebnis dennoch beachtlich ({\imply}
+    Demo)
+  \item<6-> \color<6>{\clr} {\em Note On} und {\em Note Off} triggern
+    LED
+  \item<7-> \color<7>{\clr} {\imply} primitive Aktivitätsanzeige
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[t]{Synthese: Rechteckschwingungen}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} einfachste denkbare ``digitale''
+    Schwingung
+  \item<3-> \color<3>{\clr} nur zwei Sample-Werte (abh.\ von
+    Lautstärke)
+  \item<4-> \color<4>{\clr} Tonhöhe entspricht Frequenz
+    (logarithmisch)
+    \begin{itemize}
+    \item<5-> \color<5>{\clr} Periodendauer $T$
+    \item<6-> \color<6>{\clr} Frequenz $f$
+    \item<7-> \color<7>{\clr} $f = \frac{1}{T}$
+    \end{itemize}
+  \item<8-> \color<8>{\clr} Lautstärke entspricht Amplitude
+    (logarithmisch)
+  \item<9-> \color<9>{\clr} {\imply} bei Flanke das Amplituden-Delta
+    zu Ausgangsumme addieren, weiter nichts zu tun
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[t]{Synthese: Festpunktarithmetik}
+  TODO
+\end{frame}
+
+\begin{frame}[t]{Synthese: Rendering (Bresenham)}
+  TODO
 \end{frame}
 
 \begin{frame}[fragile]{Audio-Ausgabe}
@@ -164,7 +254,7 @@
     \end{itemize}
   \end{itemize}
   \begin{center}
-    \includegraphics[width=0.75\textheight]{../../../../images/assembly-on-breadboard.jpg}
+    \includegraphics[width=0.75\textheight]{../../../../images/assembly-on-breadboard.jpg}<3->
   \end{center}
 \end{frame}
 
@@ -185,10 +275,12 @@
   \end{itemize}
   Ausblick
   \begin{itemize}
-  \item<9-> \color<9>{\clr} voraussichtlich in Kürze multitimbrale
+  \item<9-> \color<9>{\clr} vielleicht demnächst multitimbrale
     Version
-  \item<10-> \color<10>{\clr} später vielleicht deutlich komplexere
-    Version auf Basis von Pico-Cluster
+  \item<10-> \color<10>{\clr} {\imply} Herausforderung: $<$ 2MB
+    Flashspeicher für Soundfont
+  \item<11-> \color<11>{\clr} später vielleicht deutlich komplexere
+    Synthese mit Pico-Cluster
   \end{itemize}
 \end{frame}
 
