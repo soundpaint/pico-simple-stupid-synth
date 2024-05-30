@@ -107,7 +107,7 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
     const uint8_t velocity = event_packet[3] & 0x7f;
     _pitch_statuses[pitch].velocity = velocity;
     _pitch_statuses[pitch].amplitude = velocity;
-    gpio_put(_gpio_pin_activity_indicator, 1);
+    gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
   } else if (code_index_number == 0x8) {
     // note off
     const uint8_t pitch = event_packet[2] & 0x7f;
