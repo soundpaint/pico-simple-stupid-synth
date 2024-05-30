@@ -117,28 +117,31 @@
   \maketitle
 \end{frame}
 
-\begin{frame}[t]{Überblick}
-  \tableofcontents
-\end{frame}
+%\begin{frame}[t]{Überblick}
+%  \tableofcontents
+%\end{frame}
 
-\section{Ziele}
+%\section{Ziele}
 
 \begin{frame}[t]{Ziele}
   \begin{itemize}
   \item<2-> \color<2>{\clr} Pico als MIDI USB Device
   \item<3-> \color<3>{\clr} Proof-of-Concept MIDI Synth
-  \item<4-> \color<4>{\clr} Schnelle, einfache Synthese
-  \item<5-> \color<5>{\clr} Mindestens ca. 32-stimmig
+  \item<4-> \color<4>{\clr} schnelle, einfache Synthese
+  \item<5-> \color<5>{\clr} mindestens ca. 32-stimmig
   \item<6-> \color<6>{\clr} Audio-Ausgang via I²S oder analog
   \end{itemize}
 \end{frame}
+
+%\section{Architektur}
 
 \begin{frame}[fragile,t]{USB-Schnittstelle}
   \begin{itemize}
   \item<2-> \color<2>{\clr} USB-Implementierung über
     \texttt{tinyusb}-Bibliothek (im Pico SDK enthalten)
   \item<3-> \color<3>{\clr} Gerätedefinition in Datei
-    \texttt{usb\_descriptors.c}
+    \texttt{usb\_descriptors.c}\\(TODO: Update auf \texttt{tinyusb}
+    Version 0.15.x)
   \item<4-> \color<4>{\clr} Spannung über USB-Kabel beim Verbinden mit
     USB Host
   \item<5-> \color<5>{\clr} {\imply} Pico bootet, meldet sich beim
@@ -185,25 +188,50 @@ Simple_stupid_synth::main_loop()
 }
 \end{verbatim}
   \end{block}
+  \tikz[remember picture, overlay] {
+    \node at (current page.south west) {
+      {\color<3>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<3>[draw=red,thick] (1.1cm, 4.10cm) rectangle ++(5.3cm, 0.35cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<4>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<4>[draw=red,thick] (1.1cm, 3.70cm) rectangle ++(5.3cm, 0.35cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<6>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<6>[draw=red,thick] (1.1cm, 3.35cm) rectangle ++(2.3cm, 0.35cm);
+        \end{tikzpicture}
+      }
+    }
+  }
 \end{frame}
 
 \begin{frame}[t]{MIDI State Machine}
   \begin{itemize}
-  \item<2-> \color<2>{\clr} bislang nur {\em Note On} und {\em Note
+  \item<2-> \color<2>{\clr} wertet eingehende MIDI-Events aus
+  \item<3-> \color<3>{\clr} sendet ggf. MIDI-Events zurück
+  \item<4-> \color<4>{\clr} bislang nur {\em Note On} und {\em Note
     Off} unterstützt
-  \item<3-> \color<3>{\clr} aktuell alles auf einen einzigen Kanal
+  \item<5-> \color<5>{\clr} aktuell alles auf einen einzigen Kanal
     gemerged
-  \item<4-> \color<4>{\clr} {\imply} ggf. Noten zu kurz, wenn {\em
+  \item<6-> \color<6>{\clr} {\imply} ggf. Noten zu kurz, wenn {\em
     Note Off} aus einst anderem Kanal zuschlägt (FIXME)
-  \item<5-> \color<5>{\clr} Ergebnis dennoch beachtlich ({\imply}
+  \item<7-> \color<7>{\clr} Ergebnis dennoch beachtlich ({\imply}
     Demo)
-  \item<6-> \color<6>{\clr} {\em Note On} und {\em Note Off} triggern
+  \item<8-> \color<8>{\clr} {\em Note On} und {\em Note Off} triggern
     LED
-  \item<7-> \color<7>{\clr} {\imply} primitive Aktivitätsanzeige
+  \item<9-> \color<9>{\clr} {\imply} primitive Aktivitätsanzeige
   \end{itemize}
 \end{frame}
 
-\begin{frame}[t]{Synthese: Rechteckschwingungen}
+\begin{frame}[t]{Warum nur Rechteckschwingungen?}
   \begin{itemize}
   \item<2-> \color<2>{\clr} einfachste denkbare ``digitale''
     Schwingung
@@ -223,12 +251,203 @@ Simple_stupid_synth::main_loop()
   \end{itemize}
 \end{frame}
 
-\begin{frame}[t]{Synthese: Festpunktarithmetik}
-  TODO
+\begin{frame}[t,fragile]{Exkurs: Linien-Rasterung (ad hoc)}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} Linie $y=ax+b$ für $x_0\leq x \leq x_1$
+    auf Rasterbildschirm
+  \item<3-> \color<3>{\clr} o.B.d.A. Annahme:
+    \begin{itemize}
+    \item<4-> \color<4>{\clr} Steigung $0 \leq a \leq 1$
+    \item<5-> \color<5>{\clr} andernfalls: Achsen spiegeln
+    \end{itemize}
+  \item<6-> \color<6>{\clr} naiv:
+\begin{verbatim}
+for (int x = x0; x <= x1; x++) {
+  const double y = a * x + b;
+  draw_pixel(x, round(y));
+}
+\end{verbatim}
+  \item<7-> \color<7>{\clr} Multiplikation, Fließkommaarithmetik
+  \item<8-> \color<8>{\clr} {\imply} laaaangsamer Code\\(bei
+    Prozessoren ohne Fließkommaarithmetik)!
+  \end{itemize}
 \end{frame}
 
-\begin{frame}[t]{Synthese: Rendering (Bresenham)}
-  TODO
+\begin{frame}[t,fragile]{Exkurs: Linien-Rasterung (Bresenham)}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} initial:
+  \begin{itemize}
+  \item<3-> \color<3>{\clr} Konstante $y_0 = \textrm{round}(ax_0+b)$
+  \item<3-> \color<3>{\clr} Konstante $y_1 = \textrm{round}(ax_1+b)$
+  \item<4-> \color<4>{\clr} Konstante $dx = x_1 - x_0$
+  \item<4-> \color<4>{\clr} Konstante $dy = y_1 - y_0$
+  \item<5-> \color<5>{\clr} Variable $err = dx / 2$
+  \item<6-> \color<6>{\clr} Variable $y = y_0$
+  \end{itemize}
+  \item<7-> \color<7>{\clr} Schleife:
+\begin{verbatim}
+draw_pixel(x0, y0);
+for (int x = x0 + 1; x <= x1; x++) {
+  err += dy;
+  if (err >= dx) {
+    y += 1;
+    err -= dx;
+  }
+  draw_pixel(x, y);
+}
+\end{verbatim}
+  \item<8-> \color<8>{\clr} {\imply} in der Schleife: keine
+    Fließkommaarithmetik, keine Multiplikation
+  \item<9-> \color<9>{\clr} {\imply} schnell :-)
+  \item<10-> \color<10>{\clr} mehr Details z.B. im Wikipedia-Artikel
+    ``Bresenham-Algorithmus''
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[t,fragile]{Rendering: Implementierung}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} pro Tonhöhe (Oszillator) ein Datensatz
+  \item<3-> \color<3>{\clr} \texttt{count\_wrap}
+    \begin{itemize}
+    \item<4-> \color<4>{\clr} entspricht dem $dx$ beim
+      Bresenham-Algorithmus
+    \item<5-> \color<5>{\clr} initialisiert auf \texttt{round(0.5 *
+      count\_inc * sample\_freq / pitch\_freq)}
+    \item<6-> \color<6>{\clr} Faktor \texttt{0.5} weil 2 Flanken pro
+      Periode
+    \item<7-> \color<7>{\clr} \texttt{count\_inc} Zeitfortschritt zum
+      jeweils nächsten Sample
+    \end{itemize}
+  \item<8-> \color<8>{\clr} \texttt{count} entspricht dem Fehler
+    \texttt{err} bei Bresenham
+  \item<9-> \color<9>{\clr} \texttt{amplitude} entspricht der
+    aktuellen Auslenkung
+  \end{itemize}
+  \small
+\begin{verbatim}
+  typedef struct {
+    uint32_t count_wrap;
+    uint32_t count;
+    uint8_t velocity;
+    int16_t amplitude;
+  } pitch_status_t;
+\end{verbatim}
+  \tikz[remember picture, overlay] {
+    \node at (current page.south west) {
+      {\color<3-5>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<3-5>[draw=red,thick] (1.1cm, 4.70cm) rectangle ++(3.1cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<8>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<8>[draw=red,thick] (1.1cm, 4.40cm) rectangle ++(2.4cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<9>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<9>[draw=red,thick] (1.1cm, 3.75cm) rectangle ++(2.7cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    }
+  }
+\end{frame}
+
+\begin{frame}[t,fragile]{Synthese: Rendering (Bresenham)}
+  \vspace{-0.2cm}
+  \begin{itemize}
+  \item<2-> \color<2>{\clr} hier: innere Schleife für ein einzelnes
+    Sample
+  \item<3-> \color<3>{\clr} über alle 128 MIDI-Tönhöhen (Oszillatoren)
+  \item<4-> \color<4>{\clr} nur wenn Amplitude ungleich 0
+  \item<5-> \color<5>{\clr} Oszillator-Periodenstand um
+    \texttt{count\_inc} erhöhen
+  \item<6-> \color<6>{\clr} bei Überschreiten von \texttt{count\_wrap}
+    Flankenwechsel
+    \begin{itemize}
+    \item<7-> \color<7>{\clr} {\imply} Auslenkung umkehren
+    \item<8-> \color<8>{\clr} Zähler {\em nicht} auf 0 zurücksetzen,
+      sondern Übertrag mitnehmen
+    \item<9-> \color<9>{\clr} {\imply} Bresenham-Idee!
+    \end{itemize}
+  \item<10-> \color<10>{\clr} {\imply} keine Fließkommazahl, keine
+    Multiplikation {\imply} schnell :-)
+  \end{itemize}
+  \footnotesize
+\begin{verbatim}
+int64_t sample_value = 0;
+for (size_t pitch = 0; pitch < num_pitches; pitch++) {
+  MIDI_state_machine::pitch_status_t *pitch_status = &pitch_statuses[pitch];
+  uint32_t amplitude = pitch_status->amplitude;
+  if (amplitude) {
+    const uint32_t count_wrap = pitch_status->count_wrap;
+    uint32_t count = pitch_status->count;
+    count += count_inc;
+    if (count >= count_wrap) {
+      count -= count_wrap;
+      amplitude = -amplitude;
+      pitch_status->amplitude = amplitude;
+    }
+    pitch_status->count = count;
+    sample_value += amplitude;
+  }
+}
+\end{verbatim}
+  \tikz[remember picture, overlay] {
+    \node at (current page.south west) {
+      {\color<2>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<2>[draw=red,thick] (0.5cm, 5.30cm) rectangle ++(3.4cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<3>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<3>[draw=red,thick] (0.5cm, 5.05cm) rectangle ++(7.2cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<4>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<4>[draw=red,thick] (0.8cm, 4.20cm) rectangle ++(2.1cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<5>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<5>[draw=red,thick] (1.0cm, 3.35cm) rectangle ++(2.6cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<6>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<6>[draw=red,thick] (1.0cm, 3.10cm) rectangle ++(3.5cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<7>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<7>[draw=red,thick] (1.3cm, 2.50cm) rectangle ++(3.1cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<8-9>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<8-9>[draw=red,thick] (1.3cm, 2.80cm) rectangle ++(2.7cm, 0.3cm);
+        \end{tikzpicture}
+      }
+    }
+  }
 \end{frame}
 
 \begin{frame}[fragile]{Audio-Ausgabe}
@@ -241,7 +460,8 @@ Simple_stupid_synth::main_loop()
       SDK
     \item<5-> \color<5>{\clr} Ausgabe: GPIO 26 (BLCK), GPIO 27
       (LRCLK), GPIO 28 (DATA)
-    \item<6-> \color<6>{\clr} Analog-Wandlung über separaten Konverter
+    \item<6-> \color<6>{\clr} I²S-nach-Analog-Wandlung über separaten
+      Konverter
     \end{itemize}
   \item<7-> \color<7>{\clr} PWM funktioniert nicht wirklich
     \begin{itemize}
@@ -256,6 +476,22 @@ Simple_stupid_synth::main_loop()
   \begin{center}
     \includegraphics[width=0.75\textheight]{../../../../images/assembly-on-breadboard.jpg}<3->
   \end{center}
+  \tikz[remember picture, overlay] {
+    \node at (current page.south west) {
+      {\color<5>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<5>[draw=red,thick] (4.05cm, 3.35cm) rectangle ++(0.45cm, 0.25cm);
+        \end{tikzpicture}
+      }
+    };
+    \node at (current page.south west) {
+      {\color<6>{red}
+        \begin{tikzpicture}[remember picture, overlay]
+          \draw<6>[draw=red,thick] (5.9cm, 2.50cm) rectangle ++(1.7cm, 1.1cm);
+        \end{tikzpicture}
+      }
+    }
+  }
 \end{frame}
 
 \begin{frame}[t]{Ergebnisse \& Ausblick}
@@ -275,17 +511,23 @@ Simple_stupid_synth::main_loop()
   \end{itemize}
   Ausblick
   \begin{itemize}
-  \item<9-> \color<9>{\clr} vielleicht demnächst multitimbrale
+  \item<9-> \color<9>{\clr} getrennte Kanäle, damit Auswirkung von
+    {\em Note off} auf eigenen Kanal beschränkt
+  \item<10-> \color<10>{\clr} {\imply} {\em Note off}: Amplitude {\em
+    korrigieren} statt pauschal auf 0 zu setzen
+  \item<11-> \color<11>{\clr} Update für \texttt{usb\_descriptors.c}
+    auf aktuelle Version von \texttt{tinyusb}
+  \item<12-> \color<12>{\clr} vielleicht demnächst multitimbrale
     Version
-  \item<10-> \color<10>{\clr} {\imply} Herausforderung: $<$ 2MB
+  \item<13-> \color<13>{\clr} {\imply} Herausforderung: $<$ 2MB
     Flashspeicher für Soundfont
-  \item<11-> \color<11>{\clr} später vielleicht deutlich komplexere
+  \item<14-> \color<14>{\clr} später vielleicht deutlich komplexere
     Synthese mit Pico-Cluster
   \end{itemize}
 \end{frame}
 
 % bibliography
-\section{Literaturverweise}
+%\section{Literaturverweise}
 
 \begin{frame}[t,allowframebreaks]{Literaturverweise}
   \nocite{RaspberryPiLtd24a}
@@ -296,7 +538,7 @@ Simple_stupid_synth::main_loop()
   \printbibliography
 \end{frame}
 
-\section{Klang-Demonstration}
+%\section{Klang-Demonstration}
 
 \begin{frame}[t]{Klang-Demonstration}
   \begin{center}
