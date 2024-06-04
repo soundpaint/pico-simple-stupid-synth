@@ -73,28 +73,28 @@ Simple_stupid_synth::synth_task()
   audio_buffer->sample_count = audio_buffer_sample_count;
   int16_t *out = (int16_t *) audio_buffer->buffer->bytes;
   const uint16_t vol_mul = round(2.0 * (((long)1u) << VOL_BITS));
-  const size_t num_pitches = MIDI_state_machine::NUM_PITCHES;
+  const size_t num_osc = MIDI_state_machine::NUM_OSC;
   const uint32_t count_inc = MIDI_state_machine::COUNT_INC;
-  MIDI_state_machine::pitch_status_t *pitch_statuses =
-    _midi_state_machine->get_pitch_statuses();
+  MIDI_state_machine::osc_status_t *osc_statuses =
+    _midi_state_machine->get_osc_statuses();
   const uint32_t total_sample_count =
     audio_buffer->max_sample_count * (_is_stereo ? 2 : 1);
   for (uint32_t sample_index = 0; sample_index < total_sample_count;) {
     int64_t sample_value = 0;
-    for (size_t pitch = 0; pitch < num_pitches; pitch++) {
-      MIDI_state_machine::pitch_status_t *pitch_status = &pitch_statuses[pitch];
-      uint32_t amplitude = pitch_status->amplitude;
-      if (amplitude) {
-        const uint32_t count_wrap = pitch_status->count_wrap;
-        uint32_t count = pitch_status->count;
+    for (size_t osc = 0; osc < num_osc; osc++) {
+      MIDI_state_machine::osc_status_t *osc_status = &osc_statuses[osc];
+      uint32_t elongation = osc_status->elongation;
+      if (elongation) {
+        const uint32_t count_wrap = osc_status->count_wrap;
+        uint32_t count = osc_status->count;
         count += count_inc;
         if (count >= count_wrap) {
           count -= count_wrap;
-          amplitude = -amplitude;
-          pitch_status->amplitude = amplitude;
+          elongation = -elongation;
+          osc_status->elongation = elongation;
         }
-        pitch_status->count = count;
-        sample_value += amplitude;
+        osc_status->count = count;
+        sample_value += elongation;
       }
     }
     const int16_t scaled_sample_value =

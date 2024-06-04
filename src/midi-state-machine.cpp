@@ -62,34 +62,76 @@ MIDI_state_machine::~MIDI_state_machine()
 }
 
 void
-MIDI_state_machine::init(const uint32_t sample_freq,
-                         const uint8_t gpio_pin_activity_indicator)
+MIDI_state_machine::osc_init(const uint32_t sample_freq)
+{
+  const double count_inc = COUNT_INC;
+  const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
+  for (size_t osc = 0; osc < NUM_OSC; osc++) {
+    const double osc_freq =
+      A4_FREQ * exp((osc - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
+    // half (0.5) inc, since square wave elongation toggles twice per period
+    const uint32_t count_wrap =
+      round(0.5 * count_inc * sample_freq / osc_freq);
+    MIDI_state_machine::osc_status_t *osc_status = &_osc_statuses[osc];
+    osc_status->count_wrap = count_wrap;
+    osc_status->count = 0;
+    osc_status->velocity = 0;
+    osc_status->elongation = 0;
+  }
+}
+
+void
+MIDI_state_machine::state_init()
+{
+  for (size_t channel = 0; channel < NUM_CHN; channel++) {
+    channel_status_t *channel_status = &_midi_status.channel_status[channel];
+    for (size_t note = 0; note < NUM_OSC; note++) {
+      note_status_t *note_status = &channel_status->note_status[note];
+      note_status->velocity = 0;
+    }
+  }
+}
+
+void
+MIDI_state_machine::led_init(const uint8_t gpio_pin_activity_indicator)
 {
   _gpio_pin_activity_indicator = gpio_pin_activity_indicator;
   gpio_init(gpio_pin_activity_indicator);
   gpio_set_dir(gpio_pin_activity_indicator, GPIO_OUT);
-  const double count_inc = COUNT_INC;
-  const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
-  for (size_t pitch = 0; pitch < NUM_PITCHES; pitch++) {
-    const double pitch_freq =
-      A4_FREQ * exp((pitch - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
-    // half (0.5) inc, since square wave elongation toggles twice per period
-    const uint32_t count_wrap =
-      round(0.5 * count_inc * sample_freq / pitch_freq);
-    _pitch_statuses[pitch].count_wrap = count_wrap;
-    _pitch_statuses[pitch].count = 0;
-    _pitch_statuses[pitch].velocity = 0;
-    _pitch_statuses[pitch].amplitude = 0;
-  }
+}
+
+void
+MIDI_state_machine::init(const uint32_t sample_freq,
+                         const uint8_t gpio_pin_activity_indicator)
+{
   _timestamp_active_sensing = time_us_64();
+  osc_init(sample_freq);
+  state_init();
+  led_init(gpio_pin_activity_indicator);
   board_init();
   tusb_init();
 }
 
-MIDI_state_machine::pitch_status_t *
-MIDI_state_machine::get_pitch_statuses()
+MIDI_state_machine::osc_status_t *
+MIDI_state_machine::get_osc_statuses()
 {
-  return &_pitch_statuses[0];
+  return &_osc_statuses[0];
+}
+
+void
+MIDI_state_machine::add_to_osc_status(const uint8_t pitch,
+                                      const int8_t delta_velocity)
+{
+  osc_status_t *osc_status = &_osc_statuses[pitch];
+  osc_status->velocity += delta_velocity;
+  const int16_t elongation = osc_status->elongation;
+  if (elongation > 0) {
+    osc_status->elongation += delta_velocity;
+  } else if (elongation < 0) {
+    osc_status->elongation -= delta_velocity;
+  } else {
+    osc_status->elongation = delta_velocity;
+  }
 }
 
 /*
@@ -103,16 +145,24 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
   const uint8_t code_index_number = event_packet[0] & 0xf;
   if (code_index_number == 0x9) {
     // note on
+    const uint8_t channel = event_packet[1] & 0xf;
     const uint8_t pitch = event_packet[2] & 0x7f;
     const uint8_t velocity = event_packet[3] & 0x7f;
-    _pitch_statuses[pitch].velocity = velocity;
-    _pitch_statuses[pitch].amplitude = velocity;
+    channel_status_t *channel_status = &_midi_status.channel_status[channel];
+    note_status_t *note_status = &channel_status->note_status[pitch];
+    const uint8_t prev_velocity = note_status->velocity;
+    note_status->velocity = velocity;
+    add_to_osc_status(pitch, velocity - prev_velocity);
     gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
   } else if (code_index_number == 0x8) {
     // note off
+    const uint8_t channel = event_packet[1] & 0xf;
     const uint8_t pitch = event_packet[2] & 0x7f;
-    _pitch_statuses[pitch].velocity = 0;
-    _pitch_statuses[pitch].amplitude = 0;
+    channel_status_t *channel_status = &_midi_status.channel_status[channel];
+    note_status_t *note_status = &channel_status->note_status[pitch];
+    const uint8_t velocity = note_status->velocity;
+    note_status->velocity = 0;
+    add_to_osc_status(pitch, -velocity);
     gpio_put(_gpio_pin_activity_indicator, 0);
   }
 }

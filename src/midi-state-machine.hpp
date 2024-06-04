@@ -37,19 +37,29 @@
 
 class MIDI_state_machine {
 public:
+  static const size_t NUM_OSC = 0x80;
+  static const size_t NUM_CHN = 0x10;
   typedef struct {
     uint32_t count_wrap;
     uint32_t count;
+    uint16_t velocity;
+    int16_t elongation;
+  } osc_status_t;
+  typedef struct {
     uint8_t velocity;
-    int16_t amplitude;
-  } pitch_status_t;
-  static const size_t NUM_PITCHES = 0x80;
+  } note_status_t;
+  typedef struct {
+    note_status_t note_status[NUM_OSC];
+  } channel_status_t;
+  typedef struct {
+    channel_status_t channel_status[NUM_CHN];
+  } midi_status_t;
   static const uint32_t COUNT_INC;
   MIDI_state_machine();
   virtual ~MIDI_state_machine();
   void init(const uint32_t sample_freq,
             const uint8_t gpio_pin_activity_indicator);
-  pitch_status_t *get_pitch_statuses();
+  osc_status_t *get_osc_statuses();
   void rx_task();
   void tx_task();
 private:
@@ -59,10 +69,15 @@ private:
   static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
   static const uint8_t COUNT_HEADROOM_BITS;
   uint8_t _gpio_pin_activity_indicator;
-  pitch_status_t _pitch_statuses[NUM_PITCHES];
+  osc_status_t _osc_statuses[NUM_OSC];
+  midi_status_t _midi_status;
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
+  void osc_init(const uint32_t sample_freq);
+  void state_init();
+  void led_init(const uint8_t gpio_pin_activity_indicator);
+  void add_to_osc_status(const uint8_t pitch, const int8_t delta_velocity);
   void consume_event_packet(const uint8_t *event_packet);
   void produce_tx_data(uint8_t *buffer,
                        __unused const size_t max_buffer_size,
