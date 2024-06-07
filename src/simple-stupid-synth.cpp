@@ -59,13 +59,14 @@ Simple_stupid_synth(Audio_target *const audio_target,
   sleep_ms(10);
 }
 
-inline uint8_t
+inline int16_t
 Simple_stupid_synth::do_limit(const int16_t elongation, const uint16_t limit)
 {
+  // N.B.: int16_t is OK as return type since limit is at most 0x07f0
   return
     elongation >= 0 ?
     (elongation <= limit ? elongation : limit) :
-    (-elongation <= limit ? -elongation : -limit);
+    (elongation >= -limit ? elongation : -limit);
 }
 
 void
@@ -94,8 +95,8 @@ Simple_stupid_synth::synth_task()
     int64_t sample_value = 0;
     for (uint8_t osc = 0; osc < num_osc; osc++) {
       MIDI_state_machine::osc_status_t *osc_status = &osc_statuses[osc];
-      uint32_t elongation = osc_status->elongation;
-      //do_limit(osc_status->elongation, cumulated_channel_pressure);
+      int16_t elongation = //osc_status->elongation;
+        do_limit(osc_status->elongation, cumulated_channel_pressure);
       if (elongation) {
         const uint32_t count_wrap = osc_status->count_wrap;
         uint32_t count = osc_status->count;
