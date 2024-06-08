@@ -82,9 +82,10 @@ private:
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
-  void handle_all_sound_off();
-  void handle_all_notes_off();
-  void handle_control_change(const uint8_t controller, const uint8_t value);
+  void handle_all_sound_off(const uint8_t channel);
+  void handle_all_notes_off(const uint8_t channel);
+  void handle_control_change(const uint8_t channel, const uint8_t controller,
+                             const uint8_t value);
   void set_program_change(const uint8_t channel, const uint8_t program);
   void set_pitch_bend_change(const uint8_t channel, const uint8_t lsb,
                              const uint8_t msb);

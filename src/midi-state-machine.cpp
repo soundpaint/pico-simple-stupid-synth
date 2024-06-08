@@ -161,29 +161,26 @@ MIDI_state_machine::set_note_velocity(const uint8_t channel, const uint8_t key,
 }
 
 void
-MIDI_state_machine::handle_all_sound_off()
+MIDI_state_machine::handle_all_sound_off(const uint8_t channel)
 {
-  channels_init();
-  for (uint8_t osc = 0; osc < NUM_KEYS; osc++) {
-    osc_status_t *osc_status = &_osc_statuses[osc];
-    osc_status->velocity = 0;
-    osc_status->elongation = 0;
+  for (uint8_t key = 0; key < NUM_KEYS; key++) {
+    set_note_velocity(channel, key, 0);
   }
-  gpio_put(_gpio_pin_activity_indicator, 0);
 }
 
 void
-MIDI_state_machine::handle_all_notes_off()
+MIDI_state_machine::handle_all_notes_off(const uint8_t channel)
 {
   /*
    * Since by now, we do not implement pedal control, all notes off is
    * currently identical with all sound off.
    */
-  handle_all_sound_off();
+  handle_all_sound_off(channel);
 }
 
 void
-MIDI_state_machine::handle_control_change(const uint8_t controller,
+MIDI_state_machine::handle_control_change(const uint8_t channel,
+                                          const uint8_t controller,
                                           const uint8_t)
 {
   if (controller < 0xf8) {
@@ -193,10 +190,10 @@ MIDI_state_machine::handle_control_change(const uint8_t controller,
   // controllers 120-127: channel mode message
   switch (controller) {
   case 0xf8:
-    handle_all_sound_off();
+    handle_all_sound_off(channel);
     break;
   case 0xfb:
-    handle_all_notes_off();
+    handle_all_notes_off(channel);
     break;
   case 0xfc:
   case 0xfd:
@@ -206,7 +203,7 @@ MIDI_state_machine::handle_control_change(const uint8_t controller,
      * Not implemented.  But anyway, also turn off all notes, as the
      * specification requires.
      */
-    handle_all_notes_off();
+    handle_all_notes_off(channel);
     break;
   default:
     // not implemented => ignore
@@ -287,9 +284,10 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
   case 0xb:
     {
       // control change, including channel mode message
+      const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t controller = event_packet[2] & 0x7f;
       const uint8_t value = event_packet[3] & 0x7f;
-      handle_control_change(controller, value);
+      handle_control_change(channel, controller, value);
       break;
     }
   case 0xc:
