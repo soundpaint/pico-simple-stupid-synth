@@ -37,8 +37,9 @@
 
 class MIDI_state_machine {
 public:
-  static const size_t NUM_KEYS = 0x80;
-  static const size_t NUM_CHN = 0x10;
+  static const uint8_t NUM_KEYS = 0x80;
+  static const uint8_t NUM_CHN = 0x10;
+  static const uint32_t COUNT_INC;
   typedef struct {
     uint32_t count_wrap;
     uint32_t count;
@@ -55,7 +56,6 @@ public:
   typedef struct {
     channel_status_t channel_status[NUM_CHN];
   } midi_status_t;
-  static const uint32_t COUNT_INC;
   MIDI_state_machine();
   virtual ~MIDI_state_machine();
   void init(const uint32_t sample_freq,
@@ -70,18 +70,20 @@ private:
   static const double A4_FREQ; // freqency of concert pitch [Hz]
   static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
   static const uint8_t COUNT_HEADROOM_BITS;
+  static const uint8_t CHANNEL_PRESSURE_INIT;
   uint8_t _gpio_pin_activity_indicator;
   osc_status_t _osc_statuses[NUM_KEYS];
   midi_status_t _midi_status;
-  uint16_t _cumulated_channel_pressure = 0x10 * 0x7f;
+  uint16_t _cumulated_channel_pressure;
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
+  void set_channel_pressure(const uint8_t channel, const uint8_t pressure);
   void handle_all_sound_off();
   void handle_all_notes_off();
   void handle_control_change(const uint8_t controller, const uint8_t value);
   void osc_init(const uint32_t sample_freq);
-  void keys_init();
+  void channels_init();
   void led_init(const uint8_t gpio_pin_activity_indicator);
   void add_to_osc_status(const uint8_t osc, const int8_t delta_velocity);
   void set_note_velocity(const uint8_t channel, const uint8_t key,

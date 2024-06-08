@@ -50,6 +50,9 @@ MIDI_state_machine::A4_NOTE_NUMBER = 69;
 const uint8_t
 MIDI_state_machine::COUNT_HEADROOM_BITS = 0x8;
 
+const uint8_t
+MIDI_state_machine::CHANNEL_PRESSURE_INIT = 0x7f;
+
 const uint32_t
 MIDI_state_machine::COUNT_INC = ((long)1u) << COUNT_HEADROOM_BITS;
 
@@ -66,7 +69,7 @@ MIDI_state_machine::osc_init(const uint32_t sample_freq)
 {
   const double count_inc = COUNT_INC;
   const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
-  for (size_t osc = 0; osc < NUM_KEYS; osc++) {
+  for (uint8_t osc = 0; osc < NUM_KEYS; osc++) {
     const double osc_freq =
       A4_FREQ * exp((osc - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
     // half (0.5) inc, since square wave elongation toggles twice per period
@@ -81,10 +84,13 @@ MIDI_state_machine::osc_init(const uint32_t sample_freq)
 }
 
 void
-MIDI_state_machine::keys_init()
+MIDI_state_machine::channels_init()
 {
+  _cumulated_channel_pressure = 0;
   for (uint8_t channel = 0; channel < NUM_CHN; channel++) {
     channel_status_t *channel_status = &_midi_status.channel_status[channel];
+    channel_status->channel_pressure = CHANNEL_PRESSURE_INIT;
+    _cumulated_channel_pressure += CHANNEL_PRESSURE_INIT;
     for (uint8_t key = 0; key < NUM_KEYS; key++) {
       key_status_t *key_status = &channel_status->key_status[key];
       key_status->velocity = 0;
@@ -106,7 +112,7 @@ MIDI_state_machine::init(const uint32_t sample_freq,
 {
   _timestamp_active_sensing = time_us_64();
   osc_init(sample_freq);
-  keys_init();
+  channels_init();
   led_init(gpio_pin_activity_indicator);
   board_init();
   tusb_init();
@@ -134,6 +140,16 @@ MIDI_state_machine::add_to_osc_status(const uint8_t osc,
   }
 }
 
+void
+MIDI_state_machine::set_channel_pressure(const uint8_t channel,
+                                         const uint8_t pressure)
+{
+  channel_status_t *channel_status = &_midi_status.channel_status[channel];
+  const int8_t delta_pressure = pressure - channel_status->channel_pressure;
+  channel_status->channel_pressure = pressure;
+  _cumulated_channel_pressure += delta_pressure;
+}
+
 uint16_t
 MIDI_state_machine::get_cumulated_channel_pressure()
 {
@@ -143,7 +159,7 @@ MIDI_state_machine::get_cumulated_channel_pressure()
 void
 MIDI_state_machine::handle_all_sound_off()
 {
-  keys_init();
+  channels_init();
   for (uint8_t osc = 0; osc < NUM_KEYS; osc++) {
     osc_status_t *osc_status = &_osc_statuses[osc];
     osc_status->velocity = 0;
@@ -248,6 +264,14 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       const uint8_t controller = event_packet[2] & 0x7f;
       const uint8_t value = event_packet[3] & 0x7f;
       handle_control_change(controller, value);
+      break;
+    }
+  case 0xd:
+    {
+      // channel pressure
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t velocity = event_packet[2] & 0x7f;
+      set_channel_pressure(channel, velocity);
       break;
     }
   default:
