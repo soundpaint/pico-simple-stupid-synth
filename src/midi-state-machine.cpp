@@ -51,7 +51,13 @@ const uint8_t
 MIDI_state_machine::COUNT_HEADROOM_BITS = 0x8;
 
 const uint8_t
+MIDI_state_machine::CHANNEL_PROGRAM_INIT = 0x00;
+
+const uint8_t
 MIDI_state_machine::CHANNEL_PRESSURE_INIT = 0x7f;
+
+const uint16_t
+MIDI_state_machine::CHANNEL_PITCH_BEND_INIT = 0x2000;
 
 const uint32_t
 MIDI_state_machine::COUNT_INC = ((long)1u) << COUNT_HEADROOM_BITS;
@@ -89,8 +95,10 @@ MIDI_state_machine::channels_init()
   _cumulated_channel_pressure = 0;
   for (uint8_t channel = 0; channel < NUM_CHN; channel++) {
     channel_status_t *channel_status = &_midi_status.channel_status[channel];
+    channel_status->program = CHANNEL_PROGRAM_INIT;
     channel_status->channel_pressure = CHANNEL_PRESSURE_INIT;
     _cumulated_channel_pressure += CHANNEL_PRESSURE_INIT;
+    channel_status->pitch_bend = CHANNEL_PITCH_BEND_INIT;
     for (uint8_t key = 0; key < NUM_KEYS; key++) {
       key_status_t *key_status = &channel_status->key_status[key];
       key_status->velocity = 0;
@@ -141,19 +149,15 @@ MIDI_state_machine::add_to_osc_status(const uint8_t osc,
 }
 
 void
-MIDI_state_machine::set_channel_pressure(const uint8_t channel,
-                                         const uint8_t pressure)
+MIDI_state_machine::set_note_velocity(const uint8_t channel, const uint8_t key,
+                                      const uint8_t velocity)
 {
   channel_status_t *channel_status = &_midi_status.channel_status[channel];
-  const int8_t delta_pressure = pressure - channel_status->channel_pressure;
-  channel_status->channel_pressure = pressure;
-  _cumulated_channel_pressure += delta_pressure;
-}
-
-uint16_t
-MIDI_state_machine::get_cumulated_channel_pressure()
-{
-  return _cumulated_channel_pressure;
+  key_status_t *key_status = &channel_status->key_status[key];
+  const uint8_t prev_velocity = key_status->velocity;
+  key_status->velocity = velocity;
+  add_to_osc_status(key, velocity - prev_velocity);
+  gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
 }
 
 void
@@ -211,15 +215,37 @@ MIDI_state_machine::handle_control_change(const uint8_t controller,
 }
 
 void
-MIDI_state_machine::set_note_velocity(const uint8_t channel, const uint8_t key,
-                                      const uint8_t velocity)
+MIDI_state_machine::set_program_change(const uint8_t channel,
+                                       const uint8_t program)
 {
   channel_status_t *channel_status = &_midi_status.channel_status[channel];
-  key_status_t *key_status = &channel_status->key_status[key];
-  const uint8_t prev_velocity = key_status->velocity;
-  key_status->velocity = velocity;
-  add_to_osc_status(key, velocity - prev_velocity);
-  gpio_put(_gpio_pin_activity_indicator, velocity > 0 ? 1 : 0);
+  channel_status->program = program;
+  // track program changes, but otherwise ignore them for now
+}
+
+void
+MIDI_state_machine::set_pitch_bend_change(const uint8_t channel,
+                                          const uint8_t lsb, const uint8_t msb)
+{
+  channel_status_t *channel_status = &_midi_status.channel_status[channel];
+  channel_status->pitch_bend = ((msb & 0x7f) << 7) | (lsb & 0x7f);
+  // track pitch bend changes, but otherwise ignore them for now
+}
+
+uint16_t
+MIDI_state_machine::get_cumulated_channel_pressure()
+{
+  return _cumulated_channel_pressure;
+}
+
+void
+MIDI_state_machine::set_channel_pressure(const uint8_t channel,
+                                         const uint8_t pressure)
+{
+  channel_status_t *channel_status = &_midi_status.channel_status[channel];
+  const int8_t delta_pressure = pressure - channel_status->channel_pressure;
+  channel_status->channel_pressure = pressure;
+  _cumulated_channel_pressure += delta_pressure;
 }
 
 /*
@@ -266,12 +292,29 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       handle_control_change(controller, value);
       break;
     }
+  case 0xc:
+    {
+      // program change
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t program = event_packet[2] & 0x7f;
+      set_program_change(channel, program);
+      break;
+    }
   case 0xd:
     {
       // channel pressure
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t velocity = event_packet[2] & 0x7f;
       set_channel_pressure(channel, velocity);
+      break;
+    }
+  case 0xe:
+    {
+      // pitch bend change
+      const uint8_t channel = event_packet[1] & 0xf;
+      const uint8_t lsb = event_packet[2] & 0x7f;
+      const uint8_t msb = event_packet[3] & 0x7f;
+      set_pitch_bend_change(channel, lsb, msb);
       break;
     }
   default:

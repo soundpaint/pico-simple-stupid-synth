@@ -51,6 +51,8 @@ public:
   } key_status_t;
   typedef struct {
     key_status_t key_status[NUM_KEYS];
+    uint8_t program;
+    uint16_t pitch_bend;
     uint8_t channel_pressure;
   } channel_status_t;
   typedef struct {
@@ -70,7 +72,9 @@ private:
   static const double A4_FREQ; // freqency of concert pitch [Hz]
   static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
   static const uint8_t COUNT_HEADROOM_BITS;
+  static const uint8_t CHANNEL_PROGRAM_INIT;
   static const uint8_t CHANNEL_PRESSURE_INIT;
+  static const uint16_t CHANNEL_PITCH_BEND_INIT;
   uint8_t _gpio_pin_activity_indicator;
   osc_status_t _osc_statuses[NUM_KEYS];
   midi_status_t _midi_status;
@@ -78,10 +82,13 @@ private:
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
-  void set_channel_pressure(const uint8_t channel, const uint8_t pressure);
   void handle_all_sound_off();
   void handle_all_notes_off();
   void handle_control_change(const uint8_t controller, const uint8_t value);
+  void set_program_change(const uint8_t channel, const uint8_t program);
+  void set_pitch_bend_change(const uint8_t channel, const uint8_t lsb,
+                             const uint8_t msb);
+  void set_channel_pressure(const uint8_t channel, const uint8_t pressure);
   void osc_init(const uint32_t sample_freq);
   void channels_init();
   void led_init(const uint8_t gpio_pin_activity_indicator);
