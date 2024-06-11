@@ -34,6 +34,7 @@
 #define MIDI_STATE_MACHINE_HPP
 
 #include <ctime>
+#include "imidi-event-listener.hpp"
 
 class MIDI_state_machine {
 public:
@@ -58,7 +59,9 @@ public:
   typedef struct {
     channel_status_t channel_status[NUM_CHN];
   } midi_status_t;
-  MIDI_state_machine();
+  MIDI_state_machine(IMidi_event_listener *listener,
+                     const uint32_t sample_freq,
+                     const uint8_t gpio_pin_activity_indicator);
   virtual ~MIDI_state_machine();
   void init(const uint32_t sample_freq,
             const uint8_t gpio_pin_activity_indicator);
@@ -75,7 +78,8 @@ private:
   static const uint8_t CHANNEL_PROGRAM_INIT;
   static const uint8_t CHANNEL_PRESSURE_INIT;
   static const uint16_t CHANNEL_PITCH_BEND_INIT;
-  uint8_t _gpio_pin_activity_indicator;
+  IMidi_event_listener *_listener;
+  const uint8_t _gpio_pin_activity_indicator;
   osc_status_t _osc_statuses[NUM_KEYS];
   midi_status_t _midi_status;
   uint16_t _cumulated_channel_pressure;

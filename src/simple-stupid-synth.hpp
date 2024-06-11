@@ -34,22 +34,55 @@
 #define SIMPLE_STUPID_SYNTH_HPP
 
 #include <inttypes.h>
+#include "imidi-event-listener.hpp"
 #include "midi-state-machine.hpp"
 #include "audio-target.hpp"
 
-class Simple_stupid_synth {
+class Simple_stupid_synth : public IMidi_event_listener
+{
 public:
   static const uint32_t DEFAULT_SAMPLE_FREQ; // [HZ]
   static const uint32_t GPIO_PIN_LED;
+  MIDI_state_machine *_midi_state_machine; // FIXME: Should be a
+                                           // private constant member.
   Simple_stupid_synth(Audio_target *const audio_target,
-                      MIDI_state_machine *const midi_state_machine,
                       const uint8_t gpio_pin_activity_indicator);
+  void midi_note_off(const uint8_t channel, const uint8_t key);
+  void midi_note_on(const uint8_t channel, const uint8_t key,
+                    const uint8_t velocity);
+  void midi_polyphonic_pressure(const uint8_t channel, const uint8_t key,
+                                const uint8_t velocity);
+  void midi_control_change(const uint8_t controller, const uint8_t value);
+  void midi_program_change(const uint8_t channel, const uint8_t program);
+  void midi_channel_pressure(const uint8_t channel, const uint8_t velocity);
+  void midi_pitch_bend_change(const uint8_t channel,
+                              const uint8_t lsb, const uint8_t msb);
+  void midi_all_sound_off(const uint8_t channel);
+  void midi_local_control_off(const uint8_t channel);
+  void midi_local_control_on(const uint8_t channel);
+  void midi_all_nodes_off(const uint8_t channel);
+  void midi_omni_mode_off(const uint8_t channel);
+  void midi_omni_mode_on(const uint8_t channel);
+  void midi_mono_mode_on(const uint8_t channel, const uint8_t numberOfChannels);
+  void midi_poly_mode_on(const uint8_t channel);
+  void midi_reset_all_controllers(const uint8_t channel, const uint8_t value);
+  void midi_time_code_quarter_frame(const uint8_t msg_type,
+                                    const uint8_t values);
+  void midi_song_position_pointer(const uint8_t lsb, const uint8_t msb);
+  void midi_song_select(const uint8_t select);
+  void midi_tune_request();
+  void midi_timing_clock();
+  void midi_start();
+  void midi_cont();
+  void midi_stop();
+  void midi_active_sensing();
+  void midi_reset();
   void main_loop();
 private:
   static const uint8_t VOL_BITS;
-  const bool _is_stereo;
+  const uint8_t _gpio_pin_activity_indicator;
   Audio_target *const _audio_target;
-  MIDI_state_machine *const _midi_state_machine;
+  const bool _is_stereo;
   static inline int16_t do_limit(const int16_t elongation,
                                  const uint16_t limit);
   void synth_task();

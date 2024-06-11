@@ -62,12 +62,19 @@ MIDI_state_machine::CHANNEL_PITCH_BEND_INIT = 0x2000;
 const uint32_t
 MIDI_state_machine::COUNT_INC = ((long)1u) << COUNT_HEADROOM_BITS;
 
-MIDI_state_machine::MIDI_state_machine()
+MIDI_state_machine::
+MIDI_state_machine(IMidi_event_listener *listener,
+                   const uint32_t sample_freq,
+                   const uint8_t gpio_pin_activity_indicator) :
+  _gpio_pin_activity_indicator(gpio_pin_activity_indicator)
 {
+  _listener = listener;
+  init(sample_freq, gpio_pin_activity_indicator);
 }
 
 MIDI_state_machine::~MIDI_state_machine()
 {
+  _listener = 0;
 }
 
 void
@@ -109,7 +116,6 @@ MIDI_state_machine::channels_init()
 void
 MIDI_state_machine::led_init(const uint8_t gpio_pin_activity_indicator)
 {
-  _gpio_pin_activity_indicator = gpio_pin_activity_indicator;
   gpio_init(gpio_pin_activity_indicator);
   gpio_set_dir(gpio_pin_activity_indicator, GPIO_OUT);
 }

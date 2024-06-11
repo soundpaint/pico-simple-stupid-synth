@@ -49,13 +49,11 @@ Simple_stupid_synth::VOL_BITS = 8;
 
 Simple_stupid_synth::
 Simple_stupid_synth(Audio_target *const audio_target,
-                    MIDI_state_machine *const midi_state_machine,
                     const uint8_t gpio_pin_activity_indicator) :
-  _is_stereo(audio_target->is_stereo()),
-  _audio_target(audio_target), _midi_state_machine(midi_state_machine)
+  _gpio_pin_activity_indicator(gpio_pin_activity_indicator),
+  _audio_target(audio_target),
+  _is_stereo(audio_target->is_stereo())
 {
-  const uint32_t sample_freq = _audio_target->get_sample_freq();
-  _midi_state_machine->init(sample_freq, gpio_pin_activity_indicator);
   sleep_ms(10);
 }
 
@@ -132,6 +130,150 @@ Simple_stupid_synth::main_loop()
   }
 }
 
+void
+Simple_stupid_synth::midi_note_off(__unused const uint8_t channel,
+                                   __unused const uint8_t key)
+{
+}
+
+void
+Simple_stupid_synth::midi_note_on(__unused const uint8_t channel,
+                                  __unused const uint8_t key,
+                                  __unused const uint8_t velocity)
+{
+}
+
+void
+Simple_stupid_synth::midi_polyphonic_pressure(__unused const uint8_t channel,
+                                              __unused const uint8_t key,
+                                              __unused const uint8_t velocity)
+{
+}
+
+void
+Simple_stupid_synth::midi_control_change(__unused const uint8_t controller,
+                                         __unused const uint8_t value)
+{
+}
+
+void
+Simple_stupid_synth::midi_program_change(__unused const uint8_t channel,
+                                         __unused const uint8_t program)
+{
+}
+
+void
+Simple_stupid_synth::midi_channel_pressure(__unused const uint8_t channel,
+                                           __unused const uint8_t velocity)
+{
+}
+
+void
+Simple_stupid_synth::midi_pitch_bend_change(__unused const uint8_t channel,
+                                            __unused const uint8_t lsb,
+                                            __unused const uint8_t msb)
+{
+}
+
+void
+Simple_stupid_synth::midi_all_sound_off(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_local_control_off(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_local_control_on(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_all_nodes_off(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_omni_mode_off(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_omni_mode_on(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_mono_mode_on(__unused const uint8_t channel,
+                                       __unused const uint8_t numberOfChannels)
+{
+}
+
+void
+Simple_stupid_synth::midi_poly_mode_on(__unused const uint8_t channel)
+{
+}
+
+void
+Simple_stupid_synth::midi_reset_all_controllers(__unused const uint8_t channel,
+                                                __unused const uint8_t value)
+{
+}
+
+void
+Simple_stupid_synth::midi_time_code_quarter_frame(__unused const uint8_t msg_type,
+                                                  __unused const uint8_t values)
+{
+}
+
+void
+Simple_stupid_synth::midi_song_position_pointer(__unused const uint8_t lsb,
+                                                __unused const uint8_t msb)
+{
+}
+
+void
+Simple_stupid_synth::midi_song_select(__unused const uint8_t select)
+{
+}
+
+void
+Simple_stupid_synth::midi_tune_request()
+{
+}
+
+void
+Simple_stupid_synth::midi_timing_clock()
+{
+}
+
+void
+Simple_stupid_synth::midi_start()
+{
+}
+
+void
+Simple_stupid_synth::midi_cont()
+{
+}
+
+void
+Simple_stupid_synth::midi_stop()
+{
+}
+
+void
+Simple_stupid_synth::midi_active_sensing()
+{
+}
+
+void
+Simple_stupid_synth::midi_reset()
+{
+}
+
 int main()
 {
   stdio_init_all();
@@ -149,12 +291,14 @@ int main()
                                 gpio_pin_i2s_clock_base, gpio_pin_i2s_data);
   audio_target.init();
 #endif
-  MIDI_state_machine midi_state_machine;
   const uint8_t gpio_pin_activity_indicator =
     Simple_stupid_synth::GPIO_PIN_LED; // GPIO 25 (LED)
   Simple_stupid_synth simple_stupid_synth(&audio_target,
-                                          &midi_state_machine,
                                           gpio_pin_activity_indicator);
+  MIDI_state_machine midi_state_machine(&simple_stupid_synth,
+                                        audio_target.get_sample_freq(),
+                                        gpio_pin_activity_indicator);
+  simple_stupid_synth._midi_state_machine = &midi_state_machine;
   simple_stupid_synth.main_loop();
   return 0;
 }
