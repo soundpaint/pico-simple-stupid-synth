@@ -79,6 +79,12 @@ public:
   void midi_stop();
   void midi_active_sensing();
   void midi_reset();
+  void midi_sys_ex_start();
+  void midi_sys_ex_data(const uint8_t db1, const uint8_t db2,
+                        const uint8_t db3);
+  void midi_sys_ex_end(const uint8_t db1);
+  void midi_sys_ex_end(const uint8_t db1, const uint8_t db2);
+  void midi_sys_ex_end(const uint8_t db1, const uint8_t db2, const uint8_t db3);
   void main_loop();
 private:
   static const double OCTAVE_FREQ_RATIO;

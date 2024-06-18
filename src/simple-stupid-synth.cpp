@@ -309,6 +309,33 @@ Simple_stupid_synth::midi_reset()
 {
 }
 
+void
+Simple_stupid_synth::midi_sys_ex_start()
+{
+}
+
+void
+Simple_stupid_synth::midi_sys_ex_data(const uint8_t, const uint8_t,
+                                      const uint8_t)
+{
+}
+
+void
+Simple_stupid_synth::midi_sys_ex_end(const uint8_t)
+{
+}
+
+void
+Simple_stupid_synth::midi_sys_ex_end(const uint8_t, const uint8_t)
+{
+}
+
+void
+Simple_stupid_synth::midi_sys_ex_end(const uint8_t, const uint8_t,
+                                     const uint8_t)
+{
+}
+
 int main()
 {
   stdio_init_all();

@@ -69,11 +69,19 @@ private:
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
+  bool _is_receiving_sys_ex = false;
   void init(const uint8_t gpio_pin_activity_indicator);
   void handle_all_sound_off(const uint8_t channel);
   void handle_all_notes_off(const uint8_t channel);
   void handle_control_change(const uint8_t channel, const uint8_t controller,
                              const uint8_t value);
+  void handle_sys_ex_start();
+  void handle_sys_ex_data(const uint8_t db1, const uint8_t db2,
+                          const uint8_t db3);
+  void handle_sys_ex_end(const uint8_t db1);
+  void handle_sys_ex_end(const uint8_t db1, const uint8_t db2);
+  void handle_sys_ex_end(const uint8_t db1, const uint8_t db2,
+                         const uint8_t db3);
   void set_program_change(const uint8_t channel, const uint8_t program);
   void set_pitch_bend_change(const uint8_t channel, const uint8_t lsb,
                              const uint8_t msb);
@@ -82,7 +90,10 @@ private:
   void led_init(const uint8_t gpio_pin_activity_indicator);
   void set_note_velocity(const uint8_t channel, const uint8_t key,
                          const uint8_t velocity);
-  void handle_single_byte(const uint8_t single_byte);
+  void handle_system_common_message(const uint8_t db1);
+  void handle_system_common_message(const uint8_t db1, const uint8_t db2);
+  void handle_system_common_message(const uint8_t db1, const uint8_t db2,
+                                    const uint8_t db3);
   void consume_event_packet(const uint8_t *event_packet);
   void produce_tx_data(uint8_t *buffer,
                        __unused const size_t max_buffer_size,

@@ -226,9 +226,9 @@ MIDI_state_machine::set_channel_pressure(const uint8_t channel,
 }
 
 void
-MIDI_state_machine::handle_single_byte(const uint8_t single_byte)
+MIDI_state_machine::handle_system_common_message(const uint8_t db1)
 {
-  switch (single_byte) {
+  switch (db1) {
   case 0x8:
     {
       // timing clock
@@ -272,6 +272,56 @@ MIDI_state_machine::handle_single_byte(const uint8_t single_byte)
   }
 }
 
+void
+MIDI_state_machine::handle_system_common_message(const uint8_t, const uint8_t)
+{
+  // TODO
+}
+
+void
+MIDI_state_machine::handle_system_common_message(const uint8_t, const uint8_t,
+                                                 const uint8_t)
+{
+  // TODO
+}
+
+void
+MIDI_state_machine::handle_sys_ex_start()
+{
+  _is_receiving_sys_ex = true;
+  // TODO: Handle manufacturer ID etc.
+  _listener->midi_sys_ex_start();
+}
+
+void
+MIDI_state_machine::handle_sys_ex_data(const uint8_t db1, const uint8_t db2,
+                                       const uint8_t db3)
+{
+  _listener->midi_sys_ex_data(db1, db2, db3);
+}
+
+void
+MIDI_state_machine::handle_sys_ex_end(const uint8_t db1)
+{
+  _listener->midi_sys_ex_end(db1);
+  _is_receiving_sys_ex = false;
+}
+
+void
+MIDI_state_machine::handle_sys_ex_end(const uint8_t db1, const uint8_t db2)
+{
+  _listener->midi_sys_ex_end(db1, db2);
+  _is_receiving_sys_ex = false;
+}
+
+void
+MIDI_state_machine::handle_sys_ex_end(const uint8_t db1, const uint8_t db2,
+                                      const uint8_t db3)
+{
+  _listener->midi_sys_ex_end(db1, db2, db3);
+  _is_receiving_sys_ex = false;
+}
+
 /*
  * For the structure of event packets, see Sect. 4, "USB-MIDI Event
  * Packets" in the "Universal Serial Bus Device Class Definition for
@@ -282,9 +332,63 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
 {
   const uint8_t code_index_number = event_packet[0] & 0xf;
   switch (code_index_number) {
-  case 0x8:
+  case 0x0:
+  case 0x1:
+    // reserved for future use (as of v1.0)
+    break;
+  case 0x2:
+    // two-byte system common messages
     {
-      // note off
+      handle_system_common_message(event_packet[1] & 0x7f,
+                                   event_packet[2] & 0x7f);
+      break;
+    }
+  case 0x3:
+    // three-byte system common messages
+    {
+      handle_system_common_message(event_packet[1] & 0x7f,
+                                   event_packet[2] & 0x7f,
+                                   event_packet[3] & 0x7f);
+      break;
+    }
+  case 0x4:
+    // SysEx starts or continues
+    {
+      if (!_is_receiving_sys_ex) {
+        handle_sys_ex_start();
+        _is_receiving_sys_ex = true;
+      }
+      handle_sys_ex_data(event_packet[1] & 0x7f, event_packet[2] & 0x7f,
+                         event_packet[3] & 0x7f);
+      break;
+    }
+  case 0x5:
+    // single-byte system common message or SysEx ends with the
+    // following single byte
+    {
+      if (_is_receiving_sys_ex) {
+        handle_sys_ex_end(event_packet[1] & 0x7f);
+      } else {
+        handle_system_common_message(event_packet[1] & 0xf);
+      }
+      break;
+    }
+  case 0x6:
+    // SysEx ends with the following two bytes
+    {
+      handle_sys_ex_end(event_packet[1] & 0x7f, event_packet[2] & 0x7f);
+      break;
+    }
+  case 0x7:
+    // SysEx ends with the following three bytes
+    {
+      handle_sys_ex_end(event_packet[1] & 0x7f, event_packet[2] & 0x7f,
+                        event_packet[3] & 0x7f);
+      break;
+    }
+  case 0x8:
+    // note off
+    {
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t key = event_packet[2] & 0x7f;
       const uint8_t velocity = event_packet[3] & 0x7f;
@@ -293,8 +397,8 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0x9:
+    // note on
     {
-      // note on
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t key = event_packet[2] & 0x7f;
       const uint8_t velocity = event_packet[3] & 0x7f;
@@ -303,8 +407,8 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0xa:
+    // polyphonic key pressure
     {
-      // polyphonic key pressure
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t key = event_packet[2] & 0x7f;
       const uint8_t velocity = event_packet[3] & 0x7f;
@@ -313,8 +417,8 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0xb:
+    // control change, including channel mode message
     {
-      // control change, including channel mode message
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t controller = event_packet[2] & 0x7f;
       const uint8_t value = event_packet[3] & 0x7f;
@@ -323,8 +427,8 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0xc:
+    // program change
     {
-      // program change
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t program = event_packet[2] & 0x7f;
       _listener->midi_program_change(channel, program);
@@ -332,8 +436,8 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0xd:
+    // channel pressure
     {
-      // channel pressure
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t velocity = event_packet[2] & 0x7f;
       _listener->midi_channel_pressure(channel, velocity);
@@ -341,19 +445,13 @@ MIDI_state_machine::consume_event_packet(const uint8_t *event_packet)
       break;
     }
   case 0xe:
+    // pitch bend change
     {
-      // pitch bend change
       const uint8_t channel = event_packet[1] & 0xf;
       const uint8_t lsb = event_packet[2] & 0x7f;
       const uint8_t msb = event_packet[3] & 0x7f;
       _listener->midi_pitch_bend_change(channel, lsb, msb);
       set_pitch_bend_change(channel, lsb, msb);
-      break;
-    }
-  case 0xf:
-    {
-      // single byte
-      handle_single_byte(event_packet[1] & 0xf);
       break;
     }
   default:

@@ -77,6 +77,13 @@ public:
   virtual void midi_stop() = 0;
   virtual void midi_active_sensing() = 0;
   virtual void midi_reset() = 0;
+  virtual void midi_sys_ex_start() = 0;
+  virtual void midi_sys_ex_data(const uint8_t db1, const uint8_t db2,
+                                const uint8_t db3) = 0;
+  virtual void midi_sys_ex_end(const uint8_t db1) = 0;
+  virtual void midi_sys_ex_end(const uint8_t db1, const uint8_t db2) = 0;
+  virtual void midi_sys_ex_end(const uint8_t db1, const uint8_t db2,
+                               const uint8_t db3) = 0;
 };
 
 #endif /* IMIDI_EVENT_LISTENER_HH */
