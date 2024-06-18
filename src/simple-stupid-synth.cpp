@@ -161,16 +161,12 @@ Simple_stupid_synth::main_loop()
 }
 
 void
-Simple_stupid_synth::midi_note_off(__unused const uint8_t channel,
-                                   __unused const uint8_t key,
-                                   __unused const uint8_t velocity)
+Simple_stupid_synth::midi_note_off(const uint8_t, const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_note_on(__unused const uint8_t channel,
-                                  __unused const uint8_t key,
-                                  __unused const uint8_t velocity)
+Simple_stupid_synth::midi_note_on(const uint8_t, const uint8_t, const uint8_t)
 {
 }
 
@@ -191,99 +187,90 @@ Simple_stupid_synth::midi_notes_change_velocity(const uint8_t key,
 }
 
 void
-Simple_stupid_synth::midi_polyphonic_pressure(__unused const uint8_t channel,
-                                              __unused const uint8_t key,
-                                              __unused const uint8_t velocity)
+Simple_stupid_synth::midi_polyphonic_pressure(const uint8_t, const uint8_t,
+                                              const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_control_change(__unused const uint8_t channel,
-                                         __unused const uint8_t controller,
-                                         __unused const uint8_t value)
+Simple_stupid_synth::midi_control_change(const uint8_t, const uint8_t,
+                                         const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_program_change(__unused const uint8_t channel,
-                                         __unused const uint8_t program)
+Simple_stupid_synth::midi_program_change(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_channel_pressure(__unused const uint8_t channel,
-                                           __unused const uint8_t velocity)
+Simple_stupid_synth::midi_channel_pressure(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_pitch_bend_change(__unused const uint8_t channel,
-                                            __unused const uint8_t lsb,
-                                            __unused const uint8_t msb)
+Simple_stupid_synth::midi_pitch_bend_change(const uint8_t, const uint8_t,
+                                            const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_all_sound_off(__unused const uint8_t channel)
+Simple_stupid_synth::midi_all_sound_off(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_local_control_off(__unused const uint8_t channel)
+Simple_stupid_synth::midi_reset_all_controllers(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_local_control_on(__unused const uint8_t channel)
+Simple_stupid_synth::midi_local_control_off(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_all_nodes_off(__unused const uint8_t channel)
+Simple_stupid_synth::midi_local_control_on(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_omni_mode_off(__unused const uint8_t channel)
+Simple_stupid_synth::midi_all_notes_off(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_omni_mode_on(__unused const uint8_t channel)
+Simple_stupid_synth::midi_omni_mode_off(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_mono_mode_on(__unused const uint8_t channel,
-                                       __unused const uint8_t numberOfChannels)
+Simple_stupid_synth::midi_omni_mode_on(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_poly_mode_on(__unused const uint8_t channel)
+Simple_stupid_synth::midi_mono_mode_on(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_reset_all_controllers(__unused const uint8_t channel,
-                                                __unused const uint8_t value)
+Simple_stupid_synth::midi_poly_mode_on(const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_time_code_quarter_frame(__unused const uint8_t msg_type,
-                                                  __unused const uint8_t values)
+Simple_stupid_synth::midi_time_code_quarter_frame(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_song_position_pointer(__unused const uint8_t lsb,
-                                                __unused const uint8_t msb)
+Simple_stupid_synth::midi_song_position_pointer(const uint8_t, const uint8_t)
 {
 }
 
 void
-Simple_stupid_synth::midi_song_select(__unused const uint8_t select)
+Simple_stupid_synth::midi_song_select(const uint8_t)
 {
 }
 

@@ -55,16 +55,16 @@ public:
   virtual void midi_pitch_bend_change(const uint8_t channel,
                                       const uint8_t lsb, const uint8_t msb) = 0;
   virtual void midi_all_sound_off(const uint8_t channel) = 0;
+  virtual void midi_reset_all_controllers(const uint8_t channel,
+                                          const uint8_t value) = 0;
   virtual void midi_local_control_off(const uint8_t channel) = 0;
   virtual void midi_local_control_on(const uint8_t channel) = 0;
-  virtual void midi_all_nodes_off(const uint8_t channel) = 0;
+  virtual void midi_all_notes_off(const uint8_t channel) = 0;
   virtual void midi_omni_mode_off(const uint8_t channel) = 0;
   virtual void midi_omni_mode_on(const uint8_t channel) = 0;
   virtual void midi_mono_mode_on(const uint8_t channel,
                                  const uint8_t numberOfChannels) = 0;
   virtual void midi_poly_mode_on(const uint8_t channel) = 0;
-  virtual void midi_reset_all_controllers(const uint8_t channel,
-                                          const uint8_t value) = 0;
   virtual void midi_time_code_quarter_frame(const uint8_t msg_type,
                                             const uint8_t values) = 0;
   virtual void midi_song_position_pointer(const uint8_t lsb,

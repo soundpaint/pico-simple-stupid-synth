@@ -128,29 +128,61 @@ MIDI_state_machine::handle_all_notes_off(const uint8_t channel)
 void
 MIDI_state_machine::handle_control_change(const uint8_t channel,
                                           const uint8_t controller,
-                                          const uint8_t)
+                                          const uint8_t value)
 {
-  if (controller < 0xf8) {
-    // ordinary control change: not implemented => ignore
+  /*
+   * TODO: Locally shadow all controller values, just as we do with
+   * other channel status?
+   */
+  if (controller < 0x78) {
+    // ordinary control change
+    _listener->midi_control_change(channel, controller, value);
     return;
   }
   // controllers 120-127: channel mode message
   switch (controller) {
-  case 0xf8:
+  case 0x78:
     handle_all_sound_off(channel);
+    _listener->midi_all_sound_off(channel);
     break;
-  case 0xfb:
-    handle_all_notes_off(channel);
+  case 0x79:
+    handle_all_sound_off(channel);
+    _listener->midi_reset_all_controllers(channel, value);
     break;
-  case 0xfc:
-  case 0xfd:
-  case 0xfe:
-  case 0xff:
-    /*
-     * Not implemented.  But anyway, also turn off all notes, as the
-     * specification requires.
-     */
+  case 0x7a:
+    if (value == 0) {
+      _listener->midi_local_control_off(channel);
+    } else if (value == 0x7f) {
+      _listener->midi_local_control_on(channel);
+    } else {
+      // undefined / reserved => do nothing
+    }
+    break;
+  case 0x7b:
     handle_all_notes_off(channel);
+    if (!value) {
+      _listener->midi_all_notes_off(channel);
+    }
+    break;
+  case 0x7c:
+    handle_all_notes_off(channel);
+    if (!value) {
+      _listener->midi_omni_mode_off(channel);
+    }
+    break;
+  case 0x7d:
+    handle_all_notes_off(channel);
+    if (!value) {
+      _listener->midi_omni_mode_on(channel);
+    }
+    break;
+  case 0x7e:
+    handle_all_notes_off(channel);
+    _listener->midi_mono_mode_on(channel, value);
+    break;
+  case 0x7f:
+    handle_all_notes_off(channel);
+    _listener->midi_poly_mode_on(channel);
     break;
   default:
     // not implemented => ignore
@@ -164,7 +196,7 @@ MIDI_state_machine::set_program_change(const uint8_t channel,
 {
   channel_status_t *channel_status = &_midi_status.channel_status[channel];
   channel_status->program = program;
-  // track program changes, but otherwise ignore them for now
+  _listener->midi_program_change(channel, program);
 }
 
 void
@@ -173,7 +205,7 @@ MIDI_state_machine::set_pitch_bend_change(const uint8_t channel,
 {
   channel_status_t *channel_status = &_midi_status.channel_status[channel];
   channel_status->pitch_bend = ((msb & 0x7f) << 7) | (lsb & 0x7f);
-  // track pitch bend changes, but otherwise ignore them for now
+  _listener->midi_pitch_bend_change(channel, lsb, msb);
 }
 
 uint16_t
@@ -190,6 +222,7 @@ MIDI_state_machine::set_channel_pressure(const uint8_t channel,
   const int8_t delta_pressure = pressure - channel_status->channel_pressure;
   channel_status->channel_pressure = pressure;
   _cumulated_channel_pressure += delta_pressure;
+  _listener->midi_channel_pressure(channel, pressure);
 }
 
 void
