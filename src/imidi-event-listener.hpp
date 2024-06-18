@@ -36,13 +36,17 @@
 class IMidi_event_listener
 {
 public:
-  virtual void midi_note_off(const uint8_t channel, const uint8_t key) = 0;
+  virtual void midi_note_off(const uint8_t channel, const uint8_t key,
+                             const uint8_t velocity) = 0;
   virtual void midi_note_on(const uint8_t channel, const uint8_t key,
                             const uint8_t velocity) = 0;
+  virtual void midi_notes_change_velocity(const uint8_t key,
+                                          const int8_t delta_velocity) = 0;
   virtual void midi_polyphonic_pressure(const uint8_t channel,
                                         const uint8_t key,
                                         const uint8_t velocity) = 0;
-  virtual void midi_control_change(const uint8_t controller,
+  virtual void midi_control_change(const uint8_t channel,
+                                   const uint8_t controller,
                                    const uint8_t value) = 0;
   virtual void midi_program_change(const uint8_t channel,
                                    const uint8_t program) = 0;

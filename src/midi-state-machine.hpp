@@ -34,58 +34,42 @@
 #define MIDI_STATE_MACHINE_HPP
 
 #include <ctime>
+#include "midi-constants.hpp"
 #include "imidi-event-listener.hpp"
 
 class MIDI_state_machine {
 public:
-  static const uint8_t NUM_KEYS = 0x80;
-  static const uint8_t NUM_CHN = 0x10;
-  static const uint32_t COUNT_INC;
-  typedef struct {
-    uint32_t count_wrap;
-    uint32_t count;
-    uint16_t velocity;
-    int16_t elongation;
-  } osc_status_t;
   typedef struct {
     uint8_t velocity;
   } key_status_t;
   typedef struct {
-    key_status_t key_status[NUM_KEYS];
+    key_status_t key_status[Midi_constants::NUM_KEYS];
     uint8_t program;
     uint16_t pitch_bend;
     uint8_t channel_pressure;
   } channel_status_t;
   typedef struct {
-    channel_status_t channel_status[NUM_CHN];
+    channel_status_t channel_status[Midi_constants::NUM_CHN];
   } midi_status_t;
+  static const uint32_t GPIO_PIN_LED;
   MIDI_state_machine(IMidi_event_listener *listener,
-                     const uint32_t sample_freq,
-                     const uint8_t gpio_pin_activity_indicator);
+                     const uint8_t gpio_pin_activity_indicator = GPIO_PIN_LED);
   virtual ~MIDI_state_machine();
-  void init(const uint32_t sample_freq,
-            const uint8_t gpio_pin_activity_indicator);
-  osc_status_t *get_osc_statuses();
   uint16_t get_cumulated_channel_pressure();
   void rx_task();
   void tx_task();
 private:
-  static const double OCTAVE_FREQ_RATIO;
-  static const uint8_t NOTES_PER_OCTAVE;
-  static const double A4_FREQ; // freqency of concert pitch [Hz]
-  static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
-  static const uint8_t COUNT_HEADROOM_BITS;
   static const uint8_t CHANNEL_PROGRAM_INIT;
   static const uint8_t CHANNEL_PRESSURE_INIT;
   static const uint16_t CHANNEL_PITCH_BEND_INIT;
   IMidi_event_listener *_listener;
   const uint8_t _gpio_pin_activity_indicator;
-  osc_status_t _osc_statuses[NUM_KEYS];
   midi_status_t _midi_status;
   uint16_t _cumulated_channel_pressure;
   uint8_t _skip_count = 0;
   uint8_t _msg_count = 0;
   uint64_t _timestamp_active_sensing;
+  void init(const uint8_t gpio_pin_activity_indicator);
   void handle_all_sound_off(const uint8_t channel);
   void handle_all_notes_off(const uint8_t channel);
   void handle_control_change(const uint8_t channel, const uint8_t controller,
@@ -94,12 +78,11 @@ private:
   void set_pitch_bend_change(const uint8_t channel, const uint8_t lsb,
                              const uint8_t msb);
   void set_channel_pressure(const uint8_t channel, const uint8_t pressure);
-  void osc_init(const uint32_t sample_freq);
   void channels_init();
   void led_init(const uint8_t gpio_pin_activity_indicator);
-  void add_to_osc_status(const uint8_t osc, const int8_t delta_velocity);
   void set_note_velocity(const uint8_t channel, const uint8_t key,
                          const uint8_t velocity);
+  void handle_single_byte(const uint8_t single_byte);
   void consume_event_packet(const uint8_t *event_packet);
   void produce_tx_data(uint8_t *buffer,
                        __unused const size_t max_buffer_size,

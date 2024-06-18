@@ -39,22 +39,54 @@
 //#define USE_PWM_AUDIO
 
 const uint32_t
-Simple_stupid_synth::GPIO_PIN_LED = 25;
-
-const uint32_t
 Simple_stupid_synth::DEFAULT_SAMPLE_FREQ = 24000; // [HZ]
+
+const double
+Simple_stupid_synth::OCTAVE_FREQ_RATIO = 2.0;
+
+const uint8_t
+Simple_stupid_synth::NOTES_PER_OCTAVE = 12;
+
+const double
+Simple_stupid_synth::A4_FREQ = 440.0;
+
+const uint8_t
+Simple_stupid_synth::A4_NOTE_NUMBER = 69;
+
+const uint8_t
+Simple_stupid_synth::COUNT_HEADROOM_BITS = 0x8;
 
 const uint8_t
 Simple_stupid_synth::VOL_BITS = 8;
 
+const uint32_t
+Simple_stupid_synth::COUNT_INC = ((long)1u) << COUNT_HEADROOM_BITS;
+
 Simple_stupid_synth::
-Simple_stupid_synth(Audio_target *const audio_target,
-                    const uint8_t gpio_pin_activity_indicator) :
-  _gpio_pin_activity_indicator(gpio_pin_activity_indicator),
+Simple_stupid_synth(Audio_target *const audio_target) :
   _audio_target(audio_target),
   _is_stereo(audio_target->is_stereo())
 {
-  sleep_ms(10);
+  osc_init(audio_target->get_sample_freq());
+}
+
+void
+Simple_stupid_synth::osc_init(const uint32_t sample_freq)
+{
+  const double count_inc = COUNT_INC;
+  const double log_note_step_ratio = log(OCTAVE_FREQ_RATIO) / NOTES_PER_OCTAVE;
+  for (uint8_t osc = 0; osc < Midi_constants::NUM_KEYS; osc++) {
+    const double osc_freq =
+      A4_FREQ * exp((osc - (double)A4_NOTE_NUMBER) * log_note_step_ratio);
+    // half (0.5) inc, since square wave elongation toggles twice per period
+    const uint32_t count_wrap =
+      round(0.5 * count_inc * sample_freq / osc_freq);
+    osc_status_t *osc_status = &_osc_statuses[osc];
+    osc_status->count_wrap = count_wrap;
+    osc_status->count = 0;
+    osc_status->velocity = 0;
+    osc_status->elongation = 0;
+  }
 }
 
 inline int16_t
@@ -81,10 +113,8 @@ Simple_stupid_synth::synth_task()
   audio_buffer->sample_count = audio_buffer_sample_count;
   int16_t *out = (int16_t *) audio_buffer->buffer->bytes;
   const uint16_t vol_mul = round(2.0 * (((long)1u) << VOL_BITS));
-  const uint8_t num_osc = MIDI_state_machine::NUM_KEYS;
-  const uint32_t count_inc = MIDI_state_machine::COUNT_INC;
-  MIDI_state_machine::osc_status_t *osc_statuses =
-    _midi_state_machine->get_osc_statuses();
+  const uint8_t num_osc = Midi_constants::NUM_KEYS;
+  const uint32_t count_inc = COUNT_INC;
   const uint32_t total_sample_count =
     audio_buffer->max_sample_count * (_is_stereo ? 2 : 1);
   const int16_t cumulated_channel_pressure =
@@ -92,7 +122,7 @@ Simple_stupid_synth::synth_task()
   for (uint32_t sample_index = 0; sample_index < total_sample_count;) {
     int64_t sample_value = 0;
     for (uint8_t osc = 0; osc < num_osc; osc++) {
-      MIDI_state_machine::osc_status_t *osc_status = &osc_statuses[osc];
+      osc_status_t *osc_status = &_osc_statuses[osc];
       int16_t elongation =
         do_limit(osc_status->elongation, cumulated_channel_pressure);
       if (elongation) {
@@ -132,7 +162,8 @@ Simple_stupid_synth::main_loop()
 
 void
 Simple_stupid_synth::midi_note_off(__unused const uint8_t channel,
-                                   __unused const uint8_t key)
+                                   __unused const uint8_t key,
+                                   __unused const uint8_t velocity)
 {
 }
 
@@ -144,6 +175,22 @@ Simple_stupid_synth::midi_note_on(__unused const uint8_t channel,
 }
 
 void
+Simple_stupid_synth::midi_notes_change_velocity(const uint8_t key,
+                                                const int8_t delta_velocity)
+{
+  osc_status_t *osc_status = &_osc_statuses[key];
+  osc_status->velocity += delta_velocity;
+  const int16_t elongation = osc_status->elongation;
+  if (elongation > 0) {
+    osc_status->elongation += delta_velocity;
+  } else if (elongation < 0) {
+    osc_status->elongation -= delta_velocity;
+  } else {
+    osc_status->elongation = delta_velocity;
+  }
+}
+
+void
 Simple_stupid_synth::midi_polyphonic_pressure(__unused const uint8_t channel,
                                               __unused const uint8_t key,
                                               __unused const uint8_t velocity)
@@ -151,7 +198,8 @@ Simple_stupid_synth::midi_polyphonic_pressure(__unused const uint8_t channel,
 }
 
 void
-Simple_stupid_synth::midi_control_change(__unused const uint8_t controller,
+Simple_stupid_synth::midi_control_change(__unused const uint8_t channel,
+                                         __unused const uint8_t controller,
                                          __unused const uint8_t value)
 {
 }
@@ -277,27 +325,22 @@ Simple_stupid_synth::midi_reset()
 int main()
 {
   stdio_init_all();
+  const uint32_t sample_freq = Simple_stupid_synth::DEFAULT_SAMPLE_FREQ;
 #ifdef USE_PWM_AUDIO
   const uint8_t gpio_pin_pwm_mono = PICO_AUDIO_PWM_L_PIN; // GPIO 0 (PWM_L)
-  PWM_audio_target audio_target(Simple_stupid_synth::DEFAULT_SAMPLE_FREQ,
-                                gpio_pin_pwm_mono);
+  PWM_audio_target audio_target(sample_freq, gpio_pin_pwm_mono);
   audio_target.init(3);
 #else
   const uint8_t gpio_pin_i2s_clock_base =
     PICO_AUDIO_I2S_CLOCK_PIN_BASE; // GPIO 26 (BLCK) + GPIO 27 (LRCLK)
   const uint8_t gpio_pin_i2s_data =
     PICO_AUDIO_I2S_DATA_PIN; // GPIO 28 (DATA)
-  I2S_audio_target audio_target(Simple_stupid_synth::DEFAULT_SAMPLE_FREQ,
+  I2S_audio_target audio_target(sample_freq,
                                 gpio_pin_i2s_clock_base, gpio_pin_i2s_data);
   audio_target.init();
 #endif
-  const uint8_t gpio_pin_activity_indicator =
-    Simple_stupid_synth::GPIO_PIN_LED; // GPIO 25 (LED)
-  Simple_stupid_synth simple_stupid_synth(&audio_target,
-                                          gpio_pin_activity_indicator);
-  MIDI_state_machine midi_state_machine(&simple_stupid_synth,
-                                        audio_target.get_sample_freq(),
-                                        gpio_pin_activity_indicator);
+  Simple_stupid_synth simple_stupid_synth(&audio_target);
+  MIDI_state_machine midi_state_machine(&simple_stupid_synth);
   simple_stupid_synth._midi_state_machine = &midi_state_machine;
   simple_stupid_synth.main_loop();
   return 0;

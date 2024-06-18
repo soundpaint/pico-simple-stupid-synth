@@ -42,17 +42,19 @@ class Simple_stupid_synth : public IMidi_event_listener
 {
 public:
   static const uint32_t DEFAULT_SAMPLE_FREQ; // [HZ]
-  static const uint32_t GPIO_PIN_LED;
   MIDI_state_machine *_midi_state_machine; // FIXME: Should be a
                                            // private constant member.
-  Simple_stupid_synth(Audio_target *const audio_target,
-                      const uint8_t gpio_pin_activity_indicator);
-  void midi_note_off(const uint8_t channel, const uint8_t key);
+  Simple_stupid_synth(Audio_target *const audio_target);
+  void midi_note_off(const uint8_t channel, const uint8_t key,
+                     const uint8_t velocity);
   void midi_note_on(const uint8_t channel, const uint8_t key,
                     const uint8_t velocity);
+  void midi_notes_change_velocity(const uint8_t key,
+                                  const int8_t delta_velocity);
   void midi_polyphonic_pressure(const uint8_t channel, const uint8_t key,
                                 const uint8_t velocity);
-  void midi_control_change(const uint8_t controller, const uint8_t value);
+  void midi_control_change(const uint8_t channel,
+                           const uint8_t controller, const uint8_t value);
   void midi_program_change(const uint8_t channel, const uint8_t program);
   void midi_channel_pressure(const uint8_t channel, const uint8_t velocity);
   void midi_pitch_bend_change(const uint8_t channel,
@@ -79,10 +81,23 @@ public:
   void midi_reset();
   void main_loop();
 private:
+  static const double OCTAVE_FREQ_RATIO;
+  static const uint8_t NOTES_PER_OCTAVE;
+  static const double A4_FREQ; // freqency of concert pitch [Hz]
+  static const uint8_t A4_NOTE_NUMBER; // MIDI note number of concert pitch
+  static const uint8_t COUNT_HEADROOM_BITS;
   static const uint8_t VOL_BITS;
-  const uint8_t _gpio_pin_activity_indicator;
+  static const uint32_t COUNT_INC;
+  typedef struct {
+    uint32_t count_wrap;
+    uint32_t count;
+    uint16_t velocity;
+    int16_t elongation;
+  } osc_status_t;
+  osc_status_t _osc_statuses[Midi_constants::NUM_KEYS];
   Audio_target *const _audio_target;
   const bool _is_stereo;
+  void osc_init(const uint32_t sample_freq);
   static inline int16_t do_limit(const int16_t elongation,
                                  const uint16_t limit);
   void synth_task();
